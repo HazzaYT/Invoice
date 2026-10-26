@@ -1,0 +1,2200 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#09090b">
+    <title>HAZ STUDIO — Commercial Rate Calculator & Invoicing Suite</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        zinc: {
+                            950: '#09090b',
+                            925: '#0e0e11',
+                            900: '#121215',
+                            850: '#18181c',
+                            800: '#27272a',
+                            700: '#3f3f46',
+                            500: '#71717a',
+                            400: '#a1a1aa',
+                            100: '#f4f4f5',
+                            50: '#fafafa'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            min-width: 0;
+        }
+        html, body {
+            margin: 0;
+            padding: 0;
+            background-color: #09090b;
+            color: #fafafa;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        .num {
+            font-family: 'JetBrains Mono', monospace;
+            font-variant-numeric: tabular-nums;
+        }
+        /* Subtle architectural scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #09090b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #27272a;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3f3f46;
+        }
+
+        /* Clean number input styling */
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            opacity: 1;
+        }
+        .ui-input {
+            background-color: #09090b;
+            border: 1px solid #27272a;
+            color: #fafafa;
+            border-radius: 6px;
+            padding: 7px 10px;
+            font-size: 13px;
+            line-height: 1.4;
+            width: 100%;
+            transition: border-color 0.15s ease;
+        }
+        .ui-input:focus {
+            outline: none;
+            border-color: #71717a;
+        }
+        .ui-input::placeholder {
+            color: #52525b;
+        }
+        .ui-label {
+            display: block;
+            font-size: 11px;
+            font-weight: 500;
+            color: #a1a1aa;
+            margin-bottom: 5px;
+            letter-spacing: 0.01em;
+        }
+
+        /* Responsive Line-Item Grid Layouts (Zero Overlap) */
+        .service-row-grid {
+            display: grid;
+            grid-template-columns: 24px minmax(180px, 1fr) 92px 84px 96px 88px 28px;
+            gap: 10px;
+            align-items: center;
+        }
+        @media (max-width: 760px) {
+            .service-row-grid {
+                grid-template-columns: 24px 1fr 28px;
+                gap: 8px;
+            }
+            .service-row-controls {
+                grid-column: 2 / 4;
+                display: grid;
+                grid-template-columns: 1fr 1fr 1fr;
+                gap: 8px;
+            }
+        }
+
+        .kit-row-grid {
+            display: grid;
+            grid-template-columns: 22px minmax(180px, 1fr) 68px 74px 86px 76px;
+            gap: 10px;
+            align-items: center;
+        }
+        @media (max-width: 680px) {
+            .kit-row-grid {
+                grid-template-columns: 22px 1fr;
+                gap: 8px;
+            }
+            .kit-row-metrics {
+                grid-column: 2 / -1;
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+                padding-top: 4px;
+            }
+        }
+
+        /* A4 Swiss Typography Sheet & Proportional Scaling Container */
+        #a4ScaleWrapper {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            transform-origin: top center;
+        }
+        .a4-document {
+            width: 794px;
+            min-height: 1123px;
+            background-color: #ffffff;
+            color: #09090b;
+            padding: 48px 52px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.08);
+            border-radius: 2px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+        .a4-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        .a4-table th,
+        .a4-table td {
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            vertical-align: top;
+        }
+
+        /* Print Media Stylesheet — Crisp A4 Output */
+        @media print {
+            @page {
+                size: A4 portrait;
+                margin: 10mm;
+            }
+            html, body {
+                background: #ffffff !important;
+                color: #09090b !important;
+                height: auto !important;
+                overflow: visible !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+            #appWorkspace {
+                display: block !important;
+                height: auto !important;
+                overflow: visible !important;
+            }
+            #previewPane {
+                display: block !important;
+                width: 100% !important;
+                height: auto !important;
+                overflow: visible !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                background: #ffffff !important;
+                border: none !important;
+            }
+            #a4ScaleWrapper {
+                transform: none !important;
+                height: auto !important;
+                display: block !important;
+            }
+            .a4-document {
+                width: 100% !important;
+                max-width: 100% !important;
+                min-height: auto !important;
+                padding: 4px 8px !important;
+                margin: 0 !important;
+                box-shadow: none !important;
+                border: none !important;
+            }
+            tr, .print-avoid-break {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden select-none">
+
+    <!-- ================= TOP ARCHITECTURAL APPLICATION BAR ================= -->
+    <header class="no-print h-14 bg-zinc-900 border-b border-zinc-800 px-4 flex items-center justify-between gap-3 shrink-0 z-30">
+        <!-- Left: Brand Identity & Project Switcher -->
+        <div class="flex items-center gap-3 min-w-0">
+            <div class="flex items-center gap-2.5 shrink-0">
+                <div class="w-7 h-7 rounded bg-zinc-100 text-zinc-950 flex items-center justify-center font-bold text-xs tracking-tighter">
+                    HZ
+                </div>
+                <div class="hidden sm:block">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-semibold tracking-tight text-zinc-50">HAZ STUDIO</span>
+                        <span class="text-[10px] num font-medium text-zinc-400 px-1.5 py-0.5 rounded bg-zinc-850 border border-zinc-800">v2.4</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="h-4 w-[1px] bg-zinc-800 hidden sm:block"></div>
+
+            <!-- Project Switcher Button -->
+            <button onclick="openProjectManagerModal()" class="flex items-center gap-2 bg-zinc-950 hover:bg-zinc-850 border border-zinc-800 rounded-md px-2.5 py-1.5 text-xs transition max-w-[240px] sm:max-w-[300px]" title="Switch or Manage Client Projects">
+                <svg class="w-3.5 h-3.5 text-zinc-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                </svg>
+                <span id="topBarProjectName" class="truncate font-medium text-zinc-200">Project</span>
+                <span id="topBarDocBadge" class="num text-[10px] text-zinc-400 shrink-0">EST-2026-001</span>
+                <svg class="w-3 h-3 text-zinc-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- Center: Layout View Segmented Control -->
+        <div class="flex items-center bg-zinc-950 p-0.5 rounded-lg border border-zinc-800 shrink-0">
+            <button onclick="setWorkspaceView('split')" id="viewBtn-split" class="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 4v16M4 4h16a1 1 0 011 1v14a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1z" />
+                </svg>
+                <span>Split View</span>
+            </button>
+            <button onclick="setWorkspaceView('calc')" id="viewBtn-calc" class="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                </svg>
+                <span>Calculator</span>
+            </button>
+            <button onclick="setWorkspaceView('preview')" id="viewBtn-preview" class="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span>A4 Document</span>
+            </button>
+        </div>
+
+        <!-- Right: Primary Application Actions -->
+        <div class="flex items-center gap-2 shrink-0">
+            <button id="pwaInstallBtn" onclick="triggerInstallApp()" class="hidden items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-blue-600/15 hover:bg-blue-600/25 text-blue-400 border border-blue-500/30 text-xs font-medium transition">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                <span class="hidden md:inline">Install App</span>
+            </button>
+
+            <button onclick="saveProjectSnapshot()" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-zinc-950 hover:bg-zinc-850 text-zinc-200 border border-zinc-800 text-xs font-medium transition" title="Save to Project Database">
+                <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                <span class="hidden md:inline">Save Project</span>
+            </button>
+
+            <button onclick="openEmailComposerModal()" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-zinc-950 hover:bg-zinc-850 text-zinc-200 border border-zinc-800 text-xs font-medium transition" title="Generate Client Email">
+                <svg class="w-3.5 h-3.5 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                <span class="hidden lg:inline">Client Email</span>
+            </button>
+
+            <button onclick="openAppBackupModal()" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-zinc-950 hover:bg-zinc-850 text-zinc-200 border border-zinc-800 text-xs font-medium transition" title="Desktop App Setup & JSON File Backup">
+                <svg class="w-3.5 h-3.5 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                </svg>
+                <span class="hidden lg:inline">App & Backup</span>
+            </button>
+
+            <button onclick="window.print()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-semibold transition shadow-sm">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                </svg>
+                <span>Export A4 PDF</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- ================= MAIN WORKSPACE ================= -->
+    <div id="appWorkspace" class="flex-1 flex overflow-hidden">
+
+        <!-- ================= LEFT PANE: MODULAR CALCULATOR WORKSPACE ================= -->
+        <div id="calculatorPane" class="no-print w-full xl:w-[56%] h-full flex flex-col border-r border-zinc-800 bg-zinc-950 overflow-hidden">
+
+            <!-- Sub-Header: Section Jump Bar & Live Metrics Strip -->
+            <div class="bg-zinc-900/90 border-b border-zinc-800 px-4 py-2 flex flex-wrap items-center justify-between gap-3 shrink-0">
+                <div class="flex items-center gap-1 overflow-x-auto">
+                    <button onclick="scrollToBlock('block-config')" class="px-2.5 py-1 rounded text-xs font-medium text-zinc-300 hover:text-white hover:bg-zinc-800 transition whitespace-nowrap">
+                        1. Client & Meta
+                    </button>
+                    <button onclick="scrollToBlock('block-services')" class="px-2.5 py-1 rounded text-xs font-medium text-zinc-300 hover:text-white hover:bg-zinc-800 transition whitespace-nowrap">
+                        2. Deliverables & Crew
+                    </button>
+                    <button onclick="scrollToBlock('block-kit')" class="px-2.5 py-1 rounded text-xs font-medium text-zinc-300 hover:text-white hover:bg-zinc-800 transition whitespace-nowrap flex items-center gap-1.5">
+                        <span>3. Kit Inventory</span>
+                        <span id="navKitBadge" class="num text-[10px] px-1.5 py-0.2 bg-zinc-800 text-zinc-300 rounded">0</span>
+                    </button>
+                    <button onclick="scrollToBlock('block-financials')" class="px-2.5 py-1 rounded text-xs font-medium text-zinc-300 hover:text-white hover:bg-zinc-800 transition whitespace-nowrap">
+                        4. Expenses & Terms
+                    </button>
+                </div>
+
+                <!-- Live Metrics Summary -->
+                <div class="flex items-center gap-4 ml-auto">
+                    <div class="flex items-center gap-2">
+                        <span class="text-[11px] text-zinc-400">Rig Weight:</span>
+                        <span id="liveWeightMetric" class="num text-xs font-semibold text-zinc-200">0.00 kg</span>
+                    </div>
+                    <div class="h-3.5 w-[1px] bg-zinc-800"></div>
+                    <div class="flex items-center gap-2">
+                        <span id="liveStageMetricLabel" class="text-[11px] text-zinc-400">Total Due:</span>
+                        <span id="liveTotalMetric" class="num text-sm font-semibold text-emerald-400">£0.00</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scrollable Calculator Body -->
+            <div id="calculatorScrollContainer" class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 pb-24">
+
+                <!-- INLINE SMART DEPENDENCY & FLIGHT ADVISORY ALERTS -->
+                <div id="dependencyAlertsContainer" class="space-y-2 empty:hidden"></div>
+
+                <!-- BLOCK 1: DOCUMENT & CLIENT CONFIGURATION -->
+                <section id="block-config" class="bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden">
+                    <div class="px-4 py-3 border-b border-zinc-800 flex flex-wrap items-center justify-between gap-2 bg-zinc-925">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-semibold uppercase tracking-wider text-zinc-400">01</span>
+                            <h2 class="text-xs font-semibold uppercase tracking-wider text-zinc-100">Document & Client Configuration</h2>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <!-- Quote vs Invoice Segmented Control -->
+                            <div class="flex bg-zinc-950 p-0.5 rounded-md border border-zinc-800">
+                                <button type="button" onclick="setDocumentType('quote')" id="docTypeBtn-quote" class="px-2.5 py-1 rounded text-[11px] font-medium transition">
+                                    Production Quote
+                                </button>
+                                <button type="button" onclick="setDocumentType('invoice')" id="docTypeBtn-invoice" class="px-2.5 py-1 rounded text-[11px] font-medium transition">
+                                    Tax Invoice
+                                </button>
+                            </div>
+
+                            <!-- Status Dropdown -->
+                            <select id="statusSelect" onchange="syncFormToState()" class="bg-zinc-950 border border-zinc-800 rounded-md px-2.5 py-1 text-[11px] font-medium text-zinc-200 focus:outline-none">
+                                <option value="Draft">Status: Draft</option>
+                                <option value="Sent">Status: Sent</option>
+                                <option value="Approved">Status: Approved / Deposit Paid</option>
+                                <option value="Paid">Status: Paid in Full</option>
+                            </select>
+
+                            <!-- Agency Settings Drawer Toggle -->
+                            <button type="button" onclick="toggleAgencyDrawer()" class="px-2.5 py-1 rounded-md bg-zinc-950 hover:bg-zinc-850 border border-zinc-800 text-[11px] font-medium text-zinc-300 flex items-center gap-1.5 transition">
+                                <svg class="w-3.5 h-3.5 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                <span>Agency & Bank Setup</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Collapsible Agency & Bank Details Drawer -->
+                    <div id="agencyProfileDrawer" class="hidden border-b border-zinc-800 bg-zinc-950/60 p-4 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[11px] font-semibold uppercase tracking-wider text-zinc-300">Persistent Agency & BACS Details</span>
+                            <span class="text-[11px] text-zinc-500">Saved automatically across all client documents</span>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                            <div>
+                                <label class="ui-label">Agency / Trading Name</label>
+                                <input type="text" id="agencyNameInput" oninput="syncFormToState()" class="ui-input">
+                            </div>
+                            <div>
+                                <label class="ui-label">Descriptor / Discipline</label>
+                                <input type="text" id="agencyTaglineInput" oninput="syncFormToState()" class="ui-input">
+                            </div>
+                            <div>
+                                <label class="ui-label">Contact Email</label>
+                                <input type="email" id="agencyEmailInput" oninput="syncFormToState()" class="ui-input">
+                            </div>
+                            <div>
+                                <label class="ui-label">Phone Number</label>
+                                <input type="text" id="agencyPhoneInput" oninput="syncFormToState()" class="ui-input">
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label class="ui-label">Studio / Registered Address</label>
+                                <input type="text" id="agencyAddressInput" oninput="syncFormToState()" class="ui-input">
+                            </div>
+                            <div>
+                                <label class="ui-label">Bank Name</label>
+                                <input type="text" id="bankNameInput" oninput="syncFormToState()" class="ui-input">
+                            </div>
+                            <div>
+                                <label class="ui-label">Sort Code</label>
+                                <input type="text" id="bankSortInput" oninput="syncFormToState()" class="ui-input num">
+                            </div>
+                            <div>
+                                <label class="ui-label">Account Number / IBAN</label>
+                                <input type="text" id="bankAccountInput" oninput="syncFormToState()" class="ui-input num">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Client & Project Fields -->
+                    <div class="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                        <div>
+                            <label class="ui-label">Client Contact Name</label>
+                            <input type="text" id="clientNameInput" placeholder="e.g. Marcus Vance" oninput="syncFormToState()" class="ui-input">
+                        </div>
+                        <div>
+                            <label class="ui-label">Client Company / Organisation</label>
+                            <input type="text" id="clientCompanyInput" placeholder="e.g. Meridian Architecture Ltd" oninput="syncFormToState()" class="ui-input">
+                        </div>
+                        <div>
+                            <label class="ui-label">Client Email</label>
+                            <input type="email" id="clientEmailInput" placeholder="marcus@meridian.co.uk" oninput="syncFormToState()" class="ui-input">
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="ui-label">Project Title / Production Name</label>
+                            <input type="text" id="projectTitleInput" placeholder="e.g. Brand Documentary & Social Campaign" oninput="syncFormToState()" class="ui-input font-medium">
+                        </div>
+                        <div>
+                            <label class="ui-label">Reference Number</label>
+                            <div class="flex gap-1.5">
+                                <input type="text" id="docNumberInput" oninput="syncFormToState()" class="ui-input num font-medium">
+                                <button type="button" onclick="incrementDocNumber()" title="Increment Number" class="px-2.5 bg-zinc-950 hover:bg-zinc-850 border border-zinc-800 rounded-md text-xs text-zinc-400 hover:text-zinc-100 shrink-0">
+                                    +1
+                                </button>
+                            </div>
+                        </div>
+                        <div class="sm:col-span-3">
+                            <label class="ui-label">Client Billing Address</label>
+                            <input type="text" id="clientAddressInput" placeholder="Floor 3, Baltic House, Cardiff Bay, CF10 5BR" oninput="syncFormToState()" class="ui-input">
+                        </div>
+                        <div>
+                            <label class="ui-label">Issue Date</label>
+                            <input type="date" id="issueDateInput" oninput="syncFormToState()" class="ui-input num">
+                        </div>
+                        <div>
+                            <label class="ui-label" id="dueDateFieldLabel">Valid Until / Due Date</label>
+                            <input type="date" id="dueDateInput" oninput="syncFormToState()" class="ui-input num">
+                        </div>
+                        <div>
+                            <label class="ui-label">Scheduled Shoot Date(s)</label>
+                            <input type="text" id="shootDatesInput" placeholder="e.g. 18–19 Nov 2026" oninput="syncFormToState()" class="ui-input">
+                        </div>
+                    </div>
+                </section>
+
+                <!-- BLOCK 2: CLIENT DELIVERABLES & CREW / POST LABOUR -->
+                <section id="block-services" class="bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden">
+                    <div class="px-4 py-3 border-b border-zinc-800 flex flex-wrap items-center justify-between gap-2 bg-zinc-925">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-semibold uppercase tracking-wider text-zinc-400">02</span>
+                                <h2 class="text-xs font-semibold uppercase tracking-wider text-zinc-100">Deliverables, Crew & Post-Production</h2>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="addServiceLine('Labour')" class="px-2.5 py-1 rounded-md bg-zinc-950 hover:bg-zinc-850 border border-zinc-800 text-xs font-medium text-zinc-200 transition">
+                                + Add Crew / Post Line
+                            </button>
+                            <button type="button" onclick="addServiceLine('Deliverable')" class="px-2.5 py-1 rounded-md bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-semibold transition">
+                                + Add Deliverable
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Column Headers (Desktop) -->
+                    <div class="hidden md:grid service-row-grid px-4 py-2 border-b border-zinc-800/80 bg-zinc-950/40 text-[11px] font-medium text-zinc-500">
+                        <div></div>
+                        <div>Service / Deliverable Description</div>
+                        <div>Type / Unit</div>
+                        <div class="text-right">Qty / Days</div>
+                        <div class="text-right">Rate (£)</div>
+                        <div class="text-right">Line Total</div>
+                        <div></div>
+                    </div>
+
+                    <!-- Dynamic Rows Container -->
+                    <div id="servicesRowsContainer" class="divide-y divide-zinc-800/70"></div>
+
+                    <!-- Section Footer Subtotal -->
+                    <div class="px-4 py-2.5 bg-zinc-925 border-t border-zinc-800 flex items-center justify-between text-xs">
+                        <span class="text-zinc-400">Set a Deliverable's rate to £0 if it is bundled into your Crew / Edit day rates.</span>
+                        <div class="flex items-center gap-2">
+                            <span class="text-zinc-400">Labour & Deliverables Subtotal:</span>
+                            <span id="servicesSectionSubtotal" class="num font-semibold text-zinc-100">£0.00</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- BLOCK 3: HAZ'S COMPLETE KIT INVENTORY (21/07/2026) -->
+                <section id="block-kit" class="bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden">
+                    <div class="px-4 py-3 border-b border-zinc-800 flex flex-wrap items-center justify-between gap-3 bg-zinc-925">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-semibold uppercase tracking-wider text-zinc-400">03</span>
+                            <h2 class="text-xs font-semibold uppercase tracking-wider text-zinc-100">Equipment Inventory (Haz's Kit List • 21/07/2026)</h2>
+                        </div>
+
+                        <div class="flex flex-wrap items-center gap-3">
+                            <label class="flex items-center gap-2 text-xs text-zinc-300 cursor-pointer">
+                                <input type="checkbox" id="syncKitDaysToggle" checked onchange="toggleSyncKitDays(this.checked)" class="rounded bg-zinc-950 border-zinc-700 text-zinc-100 focus:ring-0">
+                                <span>Match Shoot Days (<span id="shootDaysBadge" class="num font-semibold text-zinc-100">1</span>d)</span>
+                            </label>
+
+                            <select id="manifestModeSelect" onchange="syncFormToState()" class="bg-zinc-950 border border-zinc-800 rounded-md px-2.5 py-1 text-xs font-medium text-zinc-200 focus:outline-none">
+                                <option value="itemised">Invoice: Full Itemised Manifest</option>
+                                <option value="summarised">Invoice: Summarised Kit Package</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Quick Kit Package Bar & Physical Weight Meter -->
+                    <div class="p-4 border-b border-zinc-800 bg-zinc-950/40 space-y-3">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <div class="flex flex-wrap items-center gap-1.5">
+                                <span class="text-[11px] font-medium text-zinc-400 mr-1">Presets:</span>
+                                <button type="button" onclick="applyKitPreset('commercial')" class="px-2.5 py-1 rounded bg-zinc-850 hover:bg-zinc-800 border border-zinc-700/80 text-xs font-medium text-zinc-100 transition">
+                                    Full Commercial + Drone
+                                </button>
+                                <button type="button" onclick="applyKitPreset('interview')" class="px-2.5 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs font-medium text-zinc-300 transition">
+                                    2-Cam Interview + Audio
+                                </button>
+                                <button type="button" onclick="applyKitPreset('cinema6k')" class="px-2.5 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs font-medium text-zinc-300 transition">
+                                    BMPCC 6K Cinema Rig
+                                </button>
+                                <button type="button" onclick="applyKitPreset('runandgun')" class="px-2.5 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs font-medium text-zinc-300 transition">
+                                    Agile R6 II Run & Gun
+                                </button>
+                                <button type="button" onclick="applyKitPreset('all')" class="px-2.5 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs font-medium text-zinc-400 transition">
+                                    All Kit
+                                </button>
+                                <button type="button" onclick="applyKitPreset('none')" class="px-2.5 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs font-medium text-zinc-400 transition">
+                                    Clear Kit
+                                </button>
+                            </div>
+
+                            <button type="button" onclick="addCustomKitItem()" class="px-2.5 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-xs font-medium text-zinc-200 transition">
+                                + Add Sub-Hire / Kit Item
+                            </button>
+                        </div>
+
+                        <!-- Weight & Loadout Bar -->
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
+                            <div class="flex items-center gap-3 text-xs">
+                                <span class="text-zinc-400">Active Loadout Weight:</span>
+                                <span id="kitWeightDetail" class="num font-semibold text-zinc-200">0.00 kg / 20.00 kg Carry-On</span>
+                            </div>
+                            <div class="w-full sm:w-56 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                                <div id="kitWeightProgressBar" class="h-full bg-emerald-500 transition-all duration-200" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Kit Categories Container -->
+                    <div id="kitCategoriesContainer" class="divide-y divide-zinc-800"></div>
+                </section>
+
+                <!-- BLOCK 4: BUNDLE DISCOUNT, EXPENSES, VAT & DEPOSIT -->
+                <section id="block-financials" class="bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden">
+                    <div class="px-4 py-3 border-b border-zinc-800 bg-zinc-925 flex items-center gap-2">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-zinc-400">04</span>
+                        <h2 class="text-xs font-semibold uppercase tracking-wider text-zinc-100">Discounts, Expenses, VAT & Payment Schedule</h2>
+                    </div>
+
+                    <div class="p-4 space-y-5">
+                        <!-- Agency Kit Bundle Discount -->
+                        <div class="p-3.5 rounded-lg bg-zinc-950 border border-zinc-800 space-y-2.5">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <div>
+                                    <div class="text-xs font-semibold text-zinc-100">Agency Equipment Bundle Discount (%)</div>
+                                    <div class="text-[11px] text-zinc-400">Displays full rental value on the invoice while applying a client bundle discount on equipment.</div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <input type="number" id="kitDiscountInput" min="0" max="100" step="5" oninput="syncDiscountFromInput(this.value)" class="ui-input num text-right font-semibold" style="width: 72px;">
+                                    <span class="text-xs text-zinc-400 font-medium">%</span>
+                                </div>
+                            </div>
+                            <input type="range" id="kitDiscountRange" min="0" max="100" step="5" oninput="syncDiscountFromSlider(this.value)" class="w-full accent-zinc-100 cursor-pointer">
+                            <div class="flex justify-between text-[11px] num text-zinc-400">
+                                <span id="grossKitSummaryText">Gross Kit: £0.00</span>
+                                <span id="discountKitSummaryText" class="text-emerald-400 font-medium">Bundle Savings: -£0.00</span>
+                                <span id="netKitSummaryText" class="text-zinc-200 font-medium">Net Kit: £0.00</span>
+                            </div>
+                        </div>
+
+                        <!-- Expenses & Mileage -->
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                            <div>
+                                <label class="ui-label">Mileage (Distance × £/mi)</label>
+                                <div class="flex items-center gap-1.5">
+                                    <input type="number" id="milesInput" min="0" step="5" placeholder="Miles" oninput="syncFormToState()" class="ui-input num">
+                                    <span class="text-xs text-zinc-500">@</span>
+                                    <input type="number" id="mileageRateInput" min="0" step="0.05" oninput="syncFormToState()" class="ui-input num" style="width: 78px;">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="ui-label">Parking, Tolls & ULEZ (£)</label>
+                                <input type="number" id="parkingInput" min="0" step="1" oninput="syncFormToState()" class="ui-input num">
+                            </div>
+                            <div>
+                                <label class="ui-label">Accommodation / Per Diems (£)</label>
+                                <input type="number" id="accommodationInput" min="0" step="5" oninput="syncFormToState()" class="ui-input num">
+                            </div>
+                        </div>
+
+                        <!-- VAT & Deposit Configuration -->
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-2 border-t border-zinc-800">
+                            <div>
+                                <label class="ui-label">VAT Configuration</label>
+                                <select id="vatRateSelect" onchange="syncFormToState()" class="ui-input font-medium">
+                                    <option value="0">0% — No VAT (Non-VAT Registered)</option>
+                                    <option value="20">20% — UK Standard Rate VAT</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="ui-label">VAT Registration No. (Optional)</label>
+                                <input type="text" id="vatNumberInput" placeholder="e.g. GB 123 4567 89" oninput="syncFormToState()" class="ui-input num">
+                            </div>
+                            <div>
+                                <label class="ui-label">Billing Stage & Deposit %</label>
+                                <div class="flex gap-1.5">
+                                    <select id="billingStageSelect" onchange="syncFormToState()" class="ui-input font-medium">
+                                        <option value="full">Full Project Total</option>
+                                        <option value="deposit">Booking Deposit Due</option>
+                                        <option value="balance">Final Balance Due</option>
+                                    </select>
+                                    <input type="number" id="depositPctInput" min="10" max="90" step="5" title="Deposit Percentage (%)" oninput="syncFormToState()" class="ui-input num text-right" style="width: 68px;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Payment Terms & Footer Notes -->
+                        <div>
+                            <label class="ui-label">Payment Terms & Production Notes (Printed on A4 Document)</label>
+                            <textarea id="paymentTermsInput" rows="2" oninput="syncFormToState()" class="ui-input"></textarea>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </div>
+
+        <!-- ================= RIGHT PANE: SCALED LIVE A4 DOCUMENT PREVIEW ================= -->
+        <div id="previewPane" class="hidden xl:flex w-full xl:w-[44%] h-full bg-zinc-925 flex-col overflow-y-auto p-4 sm:p-6 items-center">
+            <!-- Preview Toolbar -->
+            <div class="no-print w-full max-w-[794px] flex items-center justify-between mb-3 text-xs text-zinc-400 shrink-0">
+                <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    <span class="font-medium text-zinc-300">Live A4 Document Preview</span>
+                    <span id="scaleIndicatorBadge" class="num text-[11px] text-zinc-500">(100%)</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button type="button" onclick="downloadStandaloneInvoiceHTML()" class="text-zinc-300 hover:text-white font-medium transition">
+                        Download HTML File
+                    </button>
+                    <button type="button" onclick="window.print()" class="text-zinc-100 hover:underline font-semibold flex items-center gap-1">
+                        <span>Print / Save A4 PDF</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Proportional Scale Wrapper so A4 Sheet Never Overflows -->
+            <div id="a4ScaleWrapper">
+                <div id="a4SheetElement" class="a4-document select-text"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ================= MODAL 1: MULTI-PROJECT CLIENT DATABASE ================= -->
+    <div id="projectManagerModal" class="no-print hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-zinc-900 border border-zinc-800 rounded-lg max-w-2xl w-full p-5 shadow-2xl flex flex-col max-h-[85vh]">
+            <div class="flex items-center justify-between pb-3 border-b border-zinc-800">
+                <div>
+                    <h3 class="text-sm font-semibold text-zinc-100">Client Projects & Saved Quotes</h3>
+                    <p class="text-xs text-zinc-400">Switch between saved client estimates and invoices stored on this device.</p>
+                </div>
+                <button onclick="closeProjectManagerModal()" class="text-zinc-400 hover:text-zinc-100 p-1">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <div id="projectsListContainer" class="flex-1 overflow-y-auto divide-y divide-zinc-800 my-3"></div>
+
+            <div class="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-zinc-800">
+                <button onclick="createNewProject()" class="px-3 py-1.5 rounded-md bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-semibold transition">
+                    + New Blank Client Quote
+                </button>
+                <button onclick="closeProjectManagerModal()" class="px-3 py-1.5 rounded-md bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium transition">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= MODAL 2: DESKTOP APP SETUP & JSON FILE BACKUP ================= -->
+    <div id="appBackupModal" class="no-print hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-zinc-900 border border-zinc-800 rounded-lg max-w-xl w-full p-5 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-zinc-800">
+                <div>
+                    <h3 class="text-sm font-semibold text-zinc-100">Desktop Application & File Backup</h3>
+                    <p class="text-xs text-zinc-400">Run HAZ STUDIO as a native desktop window and back up your database to disk.</p>
+                </div>
+                <button onclick="closeAppBackupModal()" class="text-zinc-400 hover:text-zinc-100 p-1">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- JSON Export / Import -->
+            <div class="p-3.5 rounded-lg bg-zinc-950 border border-zinc-800 space-y-3">
+                <div class="text-xs font-semibold text-zinc-200">1. Local Hard Drive Backup (.JSON)</div>
+                <p class="text-xs text-zinc-400 leading-relaxed">
+                    Export all saved client projects, kit rates, and agency bank details into a portable <code class="num text-zinc-200">.json</code> file on your laptop, or restore from a previous backup file.
+                </p>
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="exportDatabaseJSON()" class="px-3 py-1.5 rounded-md bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-semibold transition">
+                        Export Studio Backup (.JSON)
+                    </button>
+                    <label class="px-3 py-1.5 rounded-md bg-zinc-850 hover:bg-zinc-800 border border-zinc-700 text-zinc-200 text-xs font-medium transition cursor-pointer">
+                        <span>Import Backup File (.JSON)</span>
+                        <input type="file" accept=".json" onchange="importDatabaseJSON(event)" class="hidden">
+                    </label>
+                    <button onclick="downloadStandaloneInvoiceHTML()" class="px-3 py-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 text-xs font-medium transition">
+                        Download Client HTML Invoice
+                    </button>
+                </div>
+            </div>
+
+            <!-- Desktop Installation Guide -->
+            <div class="p-3.5 rounded-lg bg-zinc-950 border border-zinc-800 space-y-2">
+                <div class="text-xs font-semibold text-zinc-200">2. Install as a Standalone Desktop App (Mac / Windows)</div>
+                <ul class="text-xs text-zinc-400 space-y-1.5 list-disc pl-4 leading-relaxed">
+                    <li><strong>Chrome / Brave / Edge:</strong> Click the install icon in the right side of your browser address bar (or open the browser menu <strong>⋮ → Cast, save, and share → Install page as app...</strong>).</li>
+                    <li><strong>macOS Safari:</strong> Click <strong>File → Add to Dock...</strong> to launch HAZ STUDIO in its own standalone macOS window with offline storage.</li>
+                </ul>
+            </div>
+
+            <div class="flex justify-end pt-2">
+                <button onclick="closeAppBackupModal()" class="px-4 py-1.5 rounded-md bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium">
+                    Done
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= MODAL 3: CLIENT EMAIL COMPOSER ================= -->
+    <div id="emailComposerModal" class="no-print hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-zinc-900 border border-zinc-800 rounded-lg max-w-xl w-full p-5 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-zinc-800">
+                <div>
+                    <h3 class="text-sm font-semibold text-zinc-100">Client Proposal / Invoice Email</h3>
+                    <p class="text-xs text-zinc-400">Formatted summary to paste alongside your exported A4 PDF.</p>
+                </div>
+                <button onclick="closeEmailComposerModal()" class="text-zinc-400 hover:text-zinc-100 p-1">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <textarea id="emailComposerTextarea" rows="13" class="ui-input num text-xs leading-relaxed select-text"></textarea>
+
+            <div class="flex justify-end gap-2">
+                <button onclick="closeEmailComposerModal()" class="px-3 py-1.5 rounded-md bg-zinc-800 text-zinc-300 text-xs font-medium">
+                    Close
+                </button>
+                <button onclick="copyEmailToClipboard()" class="px-3.5 py-1.5 rounded-md bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-semibold">
+                    Copy Email Text
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Subtle Status Notification Toast -->
+    <div id="statusToast" class="no-print fixed bottom-4 right-4 z-50 hidden bg-zinc-100 text-zinc-950 text-xs font-semibold px-3.5 py-2.5 rounded-md shadow-xl border border-zinc-300 items-center gap-2">
+        <span id="statusToastText">Saved</span>
+    </div>
+
+    <!-- ================= APPLICATION LOGIC ================= -->
+    <script>
+        const DB_AGENCY_KEY = 'haz_studio_agency_v2';
+        const DB_CURRENT_KEY = 'haz_studio_active_project_v2';
+        const DB_PROJECTS_KEY = 'haz_studio_saved_projects_v2';
+
+        let currentViewMode = 'split'; // 'split' | 'calc' | 'preview'
+        let deferredInstallPrompt = null;
+
+        // Haz's Complete Kit Inventory (21/07/2026) with Accurate Weights (kg) & Daily Rental Rates (£)
+        const HAZ_MASTER_KIT = [
+            // Cameras
+            { id: 'cam_bmpcc6k', category: 'Cameras', name: 'Blackmagic Pocket Cinema Camera 6K Pro', spec: 'Super 35 BRAW • Internal ND • Dual Mini-XLR', weight: 1.24, rate: 95, days: 1, selected: true, presets: ['commercial', 'interview', 'cinema6k'] },
+            { id: 'cam_r6m2', category: 'Cameras', name: 'Canon EOS R6 Mark II', spec: 'Full-Frame 4K60 10-Bit C-Log3 Body', weight: 0.67, rate: 75, days: 1, selected: true, presets: ['commercial', 'interview', 'runandgun'] },
+
+            // Gimbal & Support
+            { id: 'sup_mvg460', category: 'Gimbal & Support', name: 'Manfrotto MVG460 (with follow-focus addon)', spec: '3-Axis Motorized Gimbal + Follow Focus Motor', weight: 1.65, rate: 45, days: 1, selected: false, presets: ['commercial', 'runandgun'] },
+            { id: 'sup_tp37', category: 'Gimbal & Support', name: 'Neewer 74" TP37 Fluid-Head Tripod', spec: '74-Inch Video Sticks + Fluid Pan/Tilt Head', weight: 3.85, rate: 20, days: 1, selected: true, presets: ['commercial', 'interview', 'cinema6k'] },
+            { id: 'sup_cage6k', category: 'Gimbal & Support', name: 'BMPCC 6K Pro SmallRig Cage', spec: 'Modular Form-Fitting Rig Cage', weight: 0.31, rate: 10, days: 1, selected: true, presets: ['commercial', 'interview', 'cinema6k'] },
+
+            // Lenses
+            { id: 'lens_24_105', category: 'Lenses', name: 'Canon EF 24-105mm F4L IS II USM (FF)', spec: 'Full-Frame L-Series Zoom • 77mm Filter Thread', weight: 0.79, rate: 30, days: 1, selected: true, presets: ['commercial', 'interview', 'cinema6k', 'runandgun'] },
+            { id: 'lens_17_55', category: 'Lenses', name: 'Canon EF 17-55mm f2.8 IS USM (APSC)', spec: 'Fast f/2.8 Super 35 Zoom • 77mm Filter Thread', weight: 0.65, rate: 25, days: 1, selected: true, presets: ['commercial', 'interview', 'cinema6k'] },
+            { id: 'lens_70_300', category: 'Lenses', name: 'Canon EF 70-300mm f4-5.6 IS USM (APSC)', spec: 'Telephoto Zoom • 58mm Filter Thread', weight: 0.63, rate: 20, days: 1, selected: false, presets: ['commercial'] },
+
+            // Audio
+            { id: 'aud_m650', category: 'Audio', name: 'Ankerwork M650 Wireless Lavalier Microphone Set + Transmitter', spec: 'Dual-Channel Wireless Lavaliers + Receiver', weight: 0.18, rate: 25, days: 1, selected: true, presets: ['commercial', 'interview', 'runandgun'] },
+            { id: 'aud_dr07p', category: 'Audio', name: 'TASCAM DR07P Portable Recorder', spec: 'Portable Stereo Field & Line Audio Recorder', weight: 0.13, rate: 15, days: 1, selected: true, presets: ['interview'] },
+            { id: 'aud_nt1a', category: 'Audio', name: 'Rode NT1A Condenser Microphone', spec: 'Large-Diaphragm Studio Vocal Mic (48V XLR)', weight: 0.32, rate: 18, days: 1, selected: false, presets: [] },
+            { id: 'aud_sm57', category: 'Audio', name: 'Shure SM57 Dynamic Microphone', spec: 'Cardioid Dynamic Broadcast/Instrument Mic (XLR)', weight: 0.28, rate: 12, days: 1, selected: false, presets: [] },
+            { id: 'aud_stc1', category: 'Audio', name: 'Sontronics STC-1 Small Diaphragm Condenser Microphone', spec: 'Overhead / Boom Dialogue Condenser Mic (48V XLR)', weight: 0.16, rate: 15, days: 1, selected: true, presets: ['commercial', 'interview'] },
+            { id: 'aud_shotgun35', category: 'Audio', name: '3.5mm Shotgun Microphone', spec: 'On-Camera Directional TRS Shotgun Mic', weight: 0.09, rate: 10, days: 1, selected: false, presets: ['runandgun'] },
+
+            // Aerial
+            { id: 'aer_mini4', category: 'Aerial', name: 'DJI Mini 4 Pro (with DJI RC-2)', spec: '4K60 10-Bit D-Log M Sub-249g Drone + RC-2 Screen', weight: 0.75, rate: 110, days: 1, selected: false, presets: ['commercial'] },
+
+            // Monitors
+            { id: 'mon_f100', category: 'Monitors', name: 'Neewer F100 7" Field Monitor (Requires 1x NP-F570)', spec: '7-Inch External Focus / Director Monitor', weight: 0.34, rate: 20, days: 1, selected: true, presets: ['commercial', 'interview', 'cinema6k'] },
+
+            // Power
+            { id: 'pwr_vlok175', category: 'Power', name: '1x Hawk-Woods VL-175HP V-Lok Battery', spec: '175Wh High-Draw Cine V-Mount Battery', weight: 1.05, rate: 22, days: 1, selected: true, presets: ['commercial', 'interview', 'cinema6k'] },
+            { id: 'pwr_lpe6nh', category: 'Power', name: '3x NEEWER LP-E6NH Batteries', spec: 'High-Capacity Canon R6 Mark II Batteries', weight: 0.24, rate: 10, days: 1, selected: true, presets: ['commercial', 'interview', 'runandgun'] },
+            { id: 'pwr_lpe6', category: 'Power', name: '1x Canon LP-E6 Battery', spec: 'OEM Spare LP-E6 Battery', weight: 0.08, rate: 5, days: 1, selected: true, presets: ['commercial', 'interview', 'runandgun'] },
+            { id: 'pwr_bmd_npf', category: 'Power', name: '2x Blackmagic NP-F570 Batteries', spec: 'NP-F570 Power for Monitor / 6K Pro', weight: 0.30, rate: 8, days: 1, selected: true, presets: ['commercial', 'interview', 'cinema6k'] },
+            { id: 'pwr_gen_npf', category: 'Power', name: '3x Generic NP-F570 Batteries', spec: 'Auxiliary NP-F570 Field Monitor Batteries', weight: 0.45, rate: 8, days: 1, selected: true, presets: ['commercial', 'interview', 'cinema6k'] },
+
+            // Storage
+            { id: 'sto_t7', category: 'Storage', name: 'Samsung T7 Shield 1TB SSD (USB-C)', spec: 'Primary High-Bitrate BRAW Recording SSD', weight: 0.10, rate: 18, days: 1, selected: true, presets: ['commercial', 'interview', 'cinema6k'] },
+            { id: 'sto_wd2tb', category: 'Storage', name: 'WD Blue 2TB Passport HDD (USB-C)', spec: 'Field DIT Backup & Archive Drive', weight: 0.15, rate: 12, days: 1, selected: true, presets: ['commercial', 'interview', 'cinema6k'] },
+            { id: 'sto_v60', category: 'Storage', name: 'Sony V60 128gb SD Card', spec: 'UHS-II V60 Primary Card for Canon R6 Mark II', weight: 0.01, rate: 10, days: 1, selected: true, presets: ['commercial', 'interview', 'runandgun'] },
+            { id: 'sto_v30', category: 'Storage', name: '4x V30 SD cards', spec: 'Media Cards for DJI Mini 4 Pro & TASCAM DR07P', weight: 0.02, rate: 10, days: 1, selected: true, presets: ['commercial', 'interview', 'runandgun'] },
+
+            // Accessories
+            { id: 'acc_nd77', category: 'Accessories', name: 'Neewer ND4-32 Neutral Density Filter (77mm Diameter)', spec: '2–5 Stop Variable ND Filter (77mm Thread)', weight: 0.07, rate: 10, days: 1, selected: true, presets: ['commercial', 'interview', 'cinema6k', 'runandgun'] },
+            { id: 'acc_leica', category: 'Accessories', name: 'LEICA Lens Cleaning Kit', spec: 'Optical Cleaning Fluid, Brush & Air Blower', weight: 0.12, rate: 0, days: 1, selected: true, presets: ['commercial', 'interview', 'cinema6k', 'runandgun'] },
+            { id: 'acc_srtool', category: 'Accessories', name: 'SmallRig Multi-Tool', spec: 'Hex & Flathead Camera Rigging Tool', weight: 0.08, rate: 0, days: 1, selected: true, presets: ['commercial', 'interview', 'cinema6k', 'runandgun'] },
+            { id: 'acc_gentool', category: 'Accessories', name: 'Generic Multi-Tool', spec: 'Utility Pliers & Grip Driver', weight: 0.11, rate: 0, days: 1, selected: true, presets: ['commercial', 'interview', 'cinema6k'] },
+
+            // Required Cables & Adapters
+            { id: 'cab_ef_eosr', category: 'Required Cables & Adapters', name: 'Canon EF-EOS R Mount Adapter', spec: 'Mounts EF Lenses onto Canon EOS R6 Mark II', weight: 0.11, rate: 10, days: 1, selected: true, presets: ['commercial', 'interview', 'runandgun'] },
+            { id: 'cab_weipu', category: 'Required Cables & Adapters', name: '2-Pin Weipu to D-Tap Power Cable + V-Lok Plate', spec: 'Powers BMPCC 6K Pro from Hawk-Woods VL-175HP', weight: 0.22, rate: 5, days: 1, selected: true, presets: ['commercial', 'interview', 'cinema6k'] },
+            { id: 'cab_usbc_ssd', category: 'Required Cables & Adapters', name: 'USB-C 3.2 Gen 2 Data Cable + SSD Clamp', spec: 'Secures & Connects Samsung T7 Shield to 6K Pro', weight: 0.08, rate: 0, days: 1, selected: true, presets: ['commercial', 'interview', 'cinema6k'] },
+            { id: 'cab_hdmi_full', category: 'Required Cables & Adapters', name: 'Full HDMI to Full HDMI Cable', spec: 'Video Feed from BMPCC 6K Pro to Neewer F100', weight: 0.06, rate: 0, days: 1, selected: true, presets: ['commercial', 'interview', 'cinema6k'] },
+            { id: 'cab_hdmi_micro', category: 'Required Cables & Adapters', name: 'Micro-HDMI to Full HDMI Cable', spec: 'Video Feed from Canon R6 Mark II to Neewer F100', weight: 0.05, rate: 0, days: 1, selected: false, presets: ['interview'] },
+            { id: 'cab_mvg_usbc', category: 'Required Cables & Adapters', name: 'Manfrotto Follow-Focus USB-C Control Cable', spec: 'Links MVG460 Follow-Focus Addon to Camera', weight: 0.06, rate: 0, days: 1, selected: false, presets: ['commercial', 'runandgun'] },
+            { id: 'cab_xlr_48v', category: 'Required Cables & Adapters', name: 'XLR Cables + 48V Phantom Supply / Mini-XLR Adapter', spec: 'Required for Rode NT1A, Sontronics STC-1 & SM57', weight: 0.35, rate: 5, days: 1, selected: true, presets: ['commercial', 'interview'] },
+            { id: 'cab_step_58_77', category: 'Required Cables & Adapters', name: '58mm-to-77mm Step-Up Filter Ring', spec: 'Adapts 77mm ND4-32 Filter to 58mm EF 70-300mm Lens', weight: 0.02, rate: 0, days: 1, selected: false, presets: ['commercial'] },
+            { id: 'cab_chargers', category: 'Required Cables & Adapters', name: 'V-Lok D-Tap Charger + Dual NP-F / LP-E6 / USB-C Chargers', spec: 'Mains Charging Loom for All Camera & Drone Batteries', weight: 0.48, rate: 0, days: 1, selected: true, presets: ['commercial', 'interview', 'cinema6k', 'runandgun'] }
+        ];
+
+        const DEFAULT_SERVICES = [
+            { id: 'srv_prep', name: 'Pre-Production, Scripting & Location Recce', spec: 'Shot-listing, technical recce & schedule', unit: 'Days', qty: 0.5, rate: 250, selected: false },
+            { id: 'srv_dop', name: 'Director of Photography / Camera Operator', spec: 'On-set principal photography & lighting', unit: 'Days', qty: 1, rate: 350, selected: true, isPrimaryShootDay: true },
+            { id: 'srv_assist', name: 'Assistant Camera / Sound Recordist', spec: '2nd camera operation & wireless audio management', unit: 'Days', qty: 1, rate: 250, selected: false },
+            { id: 'srv_drone', name: 'Commercial Drone Deployment & Flight Planning', spec: 'Airspace clearance, RAMS & aerial cinematography', unit: 'Days', qty: 1, rate: 125, selected: false },
+            { id: 'srv_edit', name: 'Video Editing / Post-Production', spec: 'Offline assembly, online cut & motion graphics', unit: 'Days', qty: 1.5, rate: 300, selected: true },
+            { id: 'srv_grade', name: 'Colour Grading (DaVinci Resolve) & Audio Mastering', spec: 'BRAW / C-Log3 colour pipeline & broadcast mix', unit: 'Days', qty: 0.5, rate: 250, selected: true },
+            { id: 'srv_del_hero', name: 'Deliverable: 60–90s 4K Master Hero Film (16:9)', spec: 'Graded master export in ProRes / H.264', unit: 'Deliverable', qty: 1, rate: 0, selected: true },
+            { id: 'srv_del_social', name: 'Deliverable: 9:16 Vertical Social Cutdowns', spec: 'Optimised for Reels / TikTok / Shorts with captions', unit: 'Deliverable', qty: 3, rate: 120, selected: false },
+            { id: 'srv_del_raw', name: 'Deliverable: Raw BRAW / C-Log3 Rushes Buyout', spec: 'Complete ungraded project media supplied on drive', unit: 'Deliverable', qty: 1, rate: 250, selected: false }
+        ];
+
+        let agencyProfile = {
+            name: 'HAZ STUDIO',
+            tagline: 'Commercial Videography & Cinema Production',
+            email: 'haz@hazstudio.co.uk',
+            phone: '+44 7700 900123',
+            address: 'Cardiff, South Wales, United Kingdom',
+            bankName: 'Starling Business Bank',
+            bankSort: '60-83-71',
+            bankAccount: '12345678'
+        };
+
+        let project = null;
+
+        function createDefaultProject() {
+            return {
+                id: 'proj_' + Date.now(),
+                docType: 'quote', // 'quote' | 'invoice'
+                status: 'Draft',
+                clientName: 'Marcus Vance',
+                clientCompany: 'Meridian Architecture Ltd',
+                clientEmail: 'marcus@meridian-arch.co.uk',
+                clientAddress: 'Floor 3, Baltic House, Cardiff Bay, CF10 5BR',
+                projectTitle: 'Q4 Brand Film & Architectural Showcase',
+                docNumber: 'EST-2026-001',
+                issueDate: '2026-10-26',
+                dueDate: '2026-11-09',
+                shootDates: '18 November 2026',
+                syncKitDays: true,
+                manifestMode: 'itemised', // 'itemised' | 'summarised'
+                kitDiscountPct: 25,
+                miles: 35,
+                mileageRate: 0.45,
+                parking: 12,
+                accommodation: 0,
+                vatRate: 0,
+                vatNumber: '',
+                billingStage: 'full', // 'full' | 'deposit' | 'balance'
+                depositPct: 50,
+                paymentTerms: '50% booking deposit required to confirm production dates. Balance payable within 14 days of final master delivery. All BRAW & C-Log3 rushes backed up across dual media drives on set.',
+                services: JSON.parse(JSON.stringify(DEFAULT_SERVICES)),
+                kit: JSON.parse(JSON.stringify(HAZ_MASTER_KIT))
+            };
+        }
+
+        // ================= INITIALIZATION & DESKTOP PWA SETUP =================
+        window.addEventListener('DOMContentLoaded', () => {
+            initDesktopPWA();
+            loadDatabase();
+            populateInputsFromState();
+            renderWorkspace();
+            setupA4ProportionalScaler();
+        });
+
+        function initDesktopPWA() {
+            // Dynamic Manifest for Standalone Desktop App Installation
+            const manifestObj = {
+                name: 'HAZ STUDIO — Rate Calculator & Invoicing Suite',
+                short_name: 'HAZ STUDIO',
+                start_url: '.',
+                display: 'standalone',
+                background_color: '#09090b',
+                theme_color: '#09090b',
+                icons: [{
+                    src: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><rect width="128" height="128" rx="24" fill="%2309090b"/><rect x="8" y="8" width="112" height="112" rx="18" fill="none" stroke="%2327272a" stroke-width="4"/><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" fill="%23fafafa" font-family="sans-serif" font-weight="800" font-size="48">HZ</text></svg>',
+                    sizes: '128x128',
+                    type: 'image/svg+xml'
+                }]
+            };
+            const manifestBlob = new Blob([JSON.stringify(manifestObj)], { type: 'application/json' });
+            const manifestLink = document.createElement('link');
+            manifestLink.rel = 'manifest';
+            manifestLink.href = URL.createObjectURL(manifestBlob);
+            document.head.appendChild(manifestLink);
+
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredInstallPrompt = e;
+                const btn = document.getElementById('pwaInstallBtn');
+                btn.classList.remove('hidden');
+                btn.classList.add('flex');
+            });
+        }
+
+        function triggerInstallApp() {
+            if (deferredInstallPrompt) {
+                deferredInstallPrompt.prompt();
+            } else {
+                openAppBackupModal();
+            }
+        }
+
+        function setupA4ProportionalScaler() {
+            const pane = document.getElementById('previewPane');
+            const wrapper = document.getElementById('a4ScaleWrapper');
+            const sheet = document.getElementById('a4SheetElement');
+            const badge = document.getElementById('scaleIndicatorBadge');
+
+            const updateScale = () => {
+                if (!pane || pane.offsetParent === null) return;
+                const availableWidth = pane.clientWidth - 48; // account for padding
+                const targetWidth = 794;
+                const scale = Math.min(1, Math.max(0.38, availableWidth / targetWidth));
+                wrapper.style.transform = `scale(${scale})`;
+                wrapper.style.height = `${Math.ceil(sheet.offsetHeight * scale)}px`;
+                if (badge) badge.textContent = `(${Math.round(scale * 100)}%)`;
+            };
+
+            const ro = new ResizeObserver(updateScale);
+            ro.observe(pane);
+            ro.observe(sheet);
+            window.addEventListener('resize', updateScale);
+            setTimeout(updateScale, 60);
+        }
+
+        // ================= PERSISTENCE LAYER =================
+        function loadDatabase() {
+            try {
+                const savedAgency = localStorage.getItem(DB_AGENCY_KEY);
+                if (savedAgency) agencyProfile = { ...agencyProfile, ...JSON.parse(savedAgency) };
+
+                const savedProject = localStorage.getItem(DB_CURRENT_KEY);
+                if (savedProject) {
+                    project = JSON.parse(savedProject);
+                } else {
+                    project = createDefaultProject();
+                }
+            } catch (err) {
+                console.error('Database load error:', err);
+                project = createDefaultProject();
+            }
+        }
+
+        function persistDatabase() {
+            try {
+                localStorage.setItem(DB_AGENCY_KEY, JSON.stringify(agencyProfile));
+                localStorage.setItem(DB_CURRENT_KEY, JSON.stringify(project));
+            } catch (err) {
+                console.error('Database save error:', err);
+            }
+        }
+
+        function notifyToast(text) {
+            const el = document.getElementById('statusToast');
+            document.getElementById('statusToastText').textContent = text;
+            el.classList.remove('hidden');
+            el.classList.add('flex');
+            clearTimeout(el._timer);
+            el._timer = setTimeout(() => {
+                el.classList.add('hidden');
+                el.classList.remove('flex');
+            }, 2400);
+        }
+
+        // ================= FORM <-> STATE SYNCHRONIZATION =================
+        function populateInputsFromState() {
+            document.getElementById('agencyNameInput').value = agencyProfile.name || '';
+            document.getElementById('agencyTaglineInput').value = agencyProfile.tagline || '';
+            document.getElementById('agencyEmailInput').value = agencyProfile.email || '';
+            document.getElementById('agencyPhoneInput').value = agencyProfile.phone || '';
+            document.getElementById('agencyAddressInput').value = agencyProfile.address || '';
+            document.getElementById('bankNameInput').value = agencyProfile.bankName || '';
+            document.getElementById('bankSortInput').value = agencyProfile.bankSort || '';
+            document.getElementById('bankAccountInput').value = agencyProfile.bankAccount || '';
+
+            document.getElementById('statusSelect').value = project.status || 'Draft';
+            document.getElementById('clientNameInput').value = project.clientName || '';
+            document.getElementById('clientCompanyInput').value = project.clientCompany || '';
+            document.getElementById('clientEmailInput').value = project.clientEmail || '';
+            document.getElementById('clientAddressInput').value = project.clientAddress || '';
+            document.getElementById('projectTitleInput').value = project.projectTitle || '';
+            document.getElementById('docNumberInput').value = project.docNumber || '';
+            document.getElementById('issueDateInput').value = project.issueDate || '2026-10-26';
+            document.getElementById('dueDateInput').value = project.dueDate || '2026-11-09';
+            document.getElementById('shootDatesInput').value = project.shootDates || '';
+
+            document.getElementById('syncKitDaysToggle').checked = project.syncKitDays !== false;
+            document.getElementById('manifestModeSelect').value = project.manifestMode || 'itemised';
+            document.getElementById('kitDiscountInput').value = project.kitDiscountPct ?? 25;
+            document.getElementById('kitDiscountRange').value = project.kitDiscountPct ?? 25;
+
+            document.getElementById('milesInput').value = project.miles ?? 0;
+            document.getElementById('mileageRateInput').value = project.mileageRate ?? 0.45;
+            document.getElementById('parkingInput').value = project.parking ?? 0;
+            document.getElementById('accommodationInput').value = project.accommodation ?? 0;
+
+            document.getElementById('vatRateSelect').value = String(project.vatRate ?? 0);
+            document.getElementById('vatNumberInput').value = project.vatNumber || '';
+            document.getElementById('billingStageSelect').value = project.billingStage || 'full';
+            document.getElementById('depositPctInput').value = project.depositPct ?? 50;
+            document.getElementById('paymentTermsInput').value = project.paymentTerms || '';
+        }
+
+        function syncFormToState() {
+            agencyProfile.name = document.getElementById('agencyNameInput').value;
+            agencyProfile.tagline = document.getElementById('agencyTaglineInput').value;
+            agencyProfile.email = document.getElementById('agencyEmailInput').value;
+            agencyProfile.phone = document.getElementById('agencyPhoneInput').value;
+            agencyProfile.address = document.getElementById('agencyAddressInput').value;
+            agencyProfile.bankName = document.getElementById('bankNameInput').value;
+            agencyProfile.bankSort = document.getElementById('bankSortInput').value;
+            agencyProfile.bankAccount = document.getElementById('bankAccountInput').value;
+
+            project.status = document.getElementById('statusSelect').value;
+            project.clientName = document.getElementById('clientNameInput').value;
+            project.clientCompany = document.getElementById('clientCompanyInput').value;
+            project.clientEmail = document.getElementById('clientEmailInput').value;
+            project.clientAddress = document.getElementById('clientAddressInput').value;
+            project.projectTitle = document.getElementById('projectTitleInput').value;
+            project.docNumber = document.getElementById('docNumberInput').value;
+            project.issueDate = document.getElementById('issueDateInput').value;
+            project.dueDate = document.getElementById('dueDateInput').value;
+            project.shootDates = document.getElementById('shootDatesInput').value;
+
+            project.manifestMode = document.getElementById('manifestModeSelect').value;
+            project.kitDiscountPct = parseFloat(document.getElementById('kitDiscountInput').value) || 0;
+            project.miles = parseFloat(document.getElementById('milesInput').value) || 0;
+            project.mileageRate = parseFloat(document.getElementById('mileageRateInput').value) || 0;
+            project.parking = parseFloat(document.getElementById('parkingInput').value) || 0;
+            project.accommodation = parseFloat(document.getElementById('accommodationInput').value) || 0;
+
+            project.vatRate = parseFloat(document.getElementById('vatRateSelect').value) || 0;
+            project.vatNumber = document.getElementById('vatNumberInput').value;
+            project.billingStage = document.getElementById('billingStageSelect').value;
+            project.depositPct = parseFloat(document.getElementById('depositPctInput').value) || 50;
+            project.paymentTerms = document.getElementById('paymentTermsInput').value;
+
+            persistDatabase();
+            renderLiveCalculations();
+        }
+
+        function setWorkspaceView(mode) {
+            currentViewMode = mode;
+            const calcPane = document.getElementById('calculatorPane');
+            const prevPane = document.getElementById('previewPane');
+
+            const btns = ['split', 'calc', 'preview'];
+            btns.forEach(k => {
+                const b = document.getElementById('viewBtn-' + k);
+                if (!b) return;
+                if (k === mode) {
+                    b.className = (k === 'split' ? 'hidden xl:flex ' : 'flex ') + 'items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-zinc-100 text-zinc-950 transition';
+                } else {
+                    b.className = (k === 'split' ? 'hidden xl:flex ' : 'flex ') + 'items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium text-zinc-400 hover:text-zinc-100 transition';
+                }
+            });
+
+            if (mode === 'split') {
+                calcPane.className = 'no-print w-full xl:w-[56%] h-full flex flex-col border-r border-zinc-800 bg-zinc-950 overflow-hidden';
+                prevPane.className = 'hidden xl:flex w-full xl:w-[44%] h-full bg-zinc-925 flex-col overflow-y-auto p-4 sm:p-6 items-center';
+            } else if (mode === 'calc') {
+                calcPane.className = 'no-print w-full h-full flex flex-col bg-zinc-950 overflow-hidden';
+                prevPane.className = 'hidden';
+            } else if (mode === 'preview') {
+                calcPane.className = 'hidden';
+                prevPane.className = 'flex w-full h-full bg-zinc-925 flex-col overflow-y-auto p-4 sm:p-8 items-center';
+            }
+            window.dispatchEvent(new Event('resize'));
+        }
+
+        function setDocumentType(type) {
+            project.docType = type;
+            if (type === 'invoice' && project.docNumber.startsWith('EST-')) {
+                project.docNumber = project.docNumber.replace('EST-', 'INV-');
+            } else if (type === 'quote' && project.docNumber.startsWith('INV-')) {
+                project.docNumber = project.docNumber.replace('INV-', 'EST-');
+            }
+            document.getElementById('docNumberInput').value = project.docNumber;
+            persistDatabase();
+            renderWorkspace();
+        }
+
+        function incrementDocNumber() {
+            const match = (project.docNumber || '').match(/(\d+)$/);
+            if (match) {
+                const next = String(parseInt(match[1], 10) + 1).padStart(match[1].length, '0');
+                project.docNumber = project.docNumber.slice(0, -match[1].length) + next;
+            } else {
+                project.docNumber = (project.docType === 'invoice' ? 'INV-2026-' : 'EST-2026-') + '002';
+            }
+            document.getElementById('docNumberInput').value = project.docNumber;
+            syncFormToState();
+        }
+
+        function toggleAgencyDrawer() {
+            document.getElementById('agencyProfileDrawer').classList.toggle('hidden');
+        }
+
+        function scrollToBlock(id) {
+            if (currentViewMode === 'preview') setWorkspaceView('calc');
+            const el = document.getElementById(id);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function syncDiscountFromInput(val) {
+            document.getElementById('kitDiscountRange').value = val;
+            syncFormToState();
+        }
+
+        function syncDiscountFromSlider(val) {
+            document.getElementById('kitDiscountInput').value = val;
+            syncFormToState();
+        }
+
+        // ================= STEP 1: DELIVERABLES & CREW LABOUR MUTATIONS =================
+        function getPrimaryShootDays() {
+            const dop = project.services.find(s => s.isPrimaryShootDay);
+            return dop && dop.selected ? (parseFloat(dop.qty) || 1) : 1;
+        }
+
+        function enforceKitDaysSync() {
+            const days = getPrimaryShootDays();
+            document.getElementById('shootDaysBadge').textContent = days;
+            if (project.syncKitDays) {
+                project.kit.forEach(k => { k.days = days; });
+            }
+        }
+
+        function toggleSyncKitDays(checked) {
+            project.syncKitDays = checked;
+            enforceKitDaysSync();
+            persistDatabase();
+            renderWorkspace();
+        }
+
+        function toggleServiceRow(idx) {
+            project.services[idx].selected = !project.services[idx].selected;
+            enforceKitDaysSync();
+            persistDatabase();
+            renderWorkspace();
+        }
+
+        function updateServiceField(idx, field, val) {
+            if (field === 'qty' || field === 'rate') {
+                project.services[idx][field] = parseFloat(val) || 0;
+                if (project.services[idx].isPrimaryShootDay && field === 'qty') {
+                    enforceKitDaysSync();
+                    renderKitCategories();
+                }
+            } else {
+                project.services[idx][field] = val;
+            }
+            persistDatabase();
+            renderLiveCalculations();
+            const lineTotalEl = document.getElementById(`srv-total-${idx}`);
+            if (lineTotalEl) {
+                const row = project.services[idx];
+                const tot = (parseFloat(row.qty) || 0) * (parseFloat(row.rate) || 0);
+                lineTotalEl.textContent = tot > 0 ? `£${tot.toFixed(2)}` : 'Included';
+            }
+        }
+
+        function removeServiceRow(idx) {
+            project.services.splice(idx, 1);
+            persistDatabase();
+            renderWorkspace();
+        }
+
+        function addServiceLine(unitType) {
+            project.services.push({
+                id: 'srv_' + Date.now(),
+                name: unitType === 'Deliverable' ? 'Custom Client Video Deliverable' : 'Additional Production Crew / Post Service',
+                spec: unitType === 'Deliverable' ? 'Graded master export' : 'Day rate production service',
+                unit: unitType === 'Deliverable' ? 'Deliverable' : 'Days',
+                qty: 1,
+                rate: unitType === 'Deliverable' ? 150 : 250,
+                selected: true
+            });
+            persistDatabase();
+            renderWorkspace();
+        }
+
+        // ================= STEP 2: KIT INVENTORY & DEPENDENCY ENGINE =================
+        function toggleKitRow(id) {
+            const item = project.kit.find(k => k.id === id);
+            if (!item) return;
+            item.selected = !item.selected;
+            persistDatabase();
+            renderWorkspace();
+        }
+
+        function updateKitField(id, field, val) {
+            const item = project.kit.find(k => k.id === id);
+            if (!item) return;
+            item[field] = parseFloat(val) || 0;
+            if (field === 'days') {
+                project.syncKitDays = false;
+                document.getElementById('syncKitDaysToggle').checked = false;
+            }
+            persistDatabase();
+            renderLiveCalculations();
+            const lineEl = document.getElementById(`kit-line-${id}`);
+            if (lineEl) {
+                const tot = (parseFloat(item.rate) || 0) * (parseFloat(item.days) || 1);
+                lineEl.textContent = tot > 0 ? `£${tot.toFixed(2)}` : 'Incl.';
+            }
+        }
+
+        function applyKitPreset(presetKey) {
+            project.kit.forEach(item => {
+                if (presetKey === 'all') {
+                    item.selected = true;
+                } else if (presetKey === 'none') {
+                    item.selected = false;
+                } else {
+                    item.selected = Array.isArray(item.presets) && item.presets.includes(presetKey);
+                }
+            });
+            if (presetKey === 'commercial') {
+                const droneSrv = project.services.find(s => s.id === 'srv_drone');
+                if (droneSrv) droneSrv.selected = true;
+            }
+            persistDatabase();
+            renderWorkspace();
+            notifyToast('Kit preset applied');
+        }
+
+        function addCustomKitItem() {
+            const shootDays = getPrimaryShootDays();
+            project.kit.push({
+                id: 'kit_custom_' + Date.now(),
+                category: 'Accessories',
+                name: 'Custom Sub-Hired Equipment Item',
+                spec: 'Custom addition',
+                weight: 0.50,
+                rate: 35,
+                days: shootDays,
+                selected: true,
+                presets: []
+            });
+            persistDatabase();
+            renderWorkspace();
+        }
+
+        function evaluateSmartDependencies() {
+            const isSel = (id) => {
+                const it = project.kit.find(k => k.id === id);
+                return Boolean(it && it.selected);
+            };
+            const missingIds = [];
+            const warnings = [];
+
+            const hasEFLens = isSel('lens_24_105') || isSel('lens_17_55') || isSel('lens_70_300');
+
+            // 1. R6 Mark II + EF lens requires Canon EF-EOS R Mount Adapter
+            if (isSel('cam_r6m2') && hasEFLens && !isSel('cab_ef_eosr')) {
+                missingIds.push('cab_ef_eosr');
+                warnings.push('Canon EOS R6 Mark II paired with EF lenses requires the Canon EF-EOS R Mount Adapter.');
+            }
+            // 2. BMPCC 6K Pro + Hawk-Woods V-Lok requires 2-Pin Weipu to D-Tap cable
+            if (isSel('cam_bmpcc6k') && isSel('pwr_vlok175') && !isSel('cab_weipu')) {
+                missingIds.push('cab_weipu');
+                warnings.push('BMPCC 6K Pro + Hawk-Woods VL-175HP requires the 2-Pin Weipu to D-Tap Power Cable.');
+            }
+            // 3. BMPCC 6K Pro + Samsung T7 Shield requires USB-C 3.2 Gen 2 cable + clamp
+            if (isSel('cam_bmpcc6k') && isSel('sto_t7') && !isSel('cab_usbc_ssd')) {
+                missingIds.push('cab_usbc_ssd');
+                warnings.push('Samsung T7 Shield 1TB SSD requires the USB-C 3.2 Gen 2 Data Cable + SSD Clamp.');
+            }
+            // 4. Neewer F100 7" Monitor requires NP-F570 batteries + HDMI cable
+            if (isSel('mon_f100')) {
+                if (!isSel('pwr_bmd_npf') && !isSel('pwr_gen_npf')) {
+                    missingIds.push('pwr_gen_npf');
+                    warnings.push('Neewer F100 7" Monitor requires at least 1x NP-F570 Battery Pack.');
+                }
+                if (isSel('cam_bmpcc6k') && !isSel('cab_hdmi_full')) {
+                    missingIds.push('cab_hdmi_full');
+                    warnings.push('Neewer F100 + BMPCC 6K Pro requires the Full HDMI Cable.');
+                }
+                if (isSel('cam_r6m2') && !isSel('cab_hdmi_micro')) {
+                    missingIds.push('cab_hdmi_micro');
+                    warnings.push('Neewer F100 + Canon R6 Mark II requires the Micro-HDMI to Full HDMI Cable.');
+                }
+            }
+            // 5. XLR Mics (NT1A, SM57, STC-1) require XLR cables & 48V supply
+            if ((isSel('aud_nt1a') || isSel('aud_sm57') || isSel('aud_stc1')) && !isSel('cab_xlr_48v')) {
+                missingIds.push('cab_xlr_48v');
+                warnings.push('XLR Microphones (NT1A / SM57 / STC-1) require XLR Cables + 48V Phantom Supply.');
+            }
+            // 6. 77mm ND Filter + 58mm EF 70-300mm lens requires 58-to-77mm Step-Up Ring
+            if (isSel('acc_nd77') && isSel('lens_70_300') && !isSel('cab_step_58_77')) {
+                missingIds.push('cab_step_58_77');
+                warnings.push('Canon EF 70-300mm (58mm thread) requires the 58mm-to-77mm Step-Up Ring for your 77mm ND4-32.');
+            }
+            // 7. Manfrotto MVG460 requires Follow-Focus USB-C Cable
+            if (isSel('sup_mvg460') && !isSel('cab_mvg_usbc')) {
+                missingIds.push('cab_mvg_usbc');
+                warnings.push('Manfrotto MVG460 Gimbal requires the Follow-Focus USB-C Control Cable.');
+            }
+
+            return {
+                missingIds: [...new Set(missingIds)],
+                warnings,
+                hasVlokFlightNote: isSel('pwr_vlok175')
+            };
+        }
+
+        function resolveAllDependencies() {
+            const { missingIds } = evaluateSmartDependencies();
+            missingIds.forEach(id => {
+                const it = project.kit.find(k => k.id === id);
+                if (it) it.selected = true;
+            });
+            persistDatabase();
+            renderWorkspace();
+            notifyToast('Resolved all rig cable & power dependencies');
+        }
+
+        // ================= FINANCIAL & WEIGHT ENGINE =================
+        function computeTotals() {
+            const activeServices = project.services.filter(s => s.selected);
+            const servicesSubtotal = activeServices.reduce((sum, s) => sum + ((parseFloat(s.qty) || 0) * (parseFloat(s.rate) || 0)), 0);
+
+            const activeKit = project.kit.filter(k => k.selected);
+            const grossKitSubtotal = activeKit.reduce((sum, k) => sum + ((parseFloat(k.rate) || 0) * (parseFloat(k.days) || 1)), 0);
+            const totalWeightKg = activeKit.reduce((sum, k) => sum + (parseFloat(k.weight) || 0), 0);
+
+            const discountPct = Math.min(100, Math.max(0, parseFloat(project.kitDiscountPct) || 0));
+            const kitDiscountAmount = grossKitSubtotal * (discountPct / 100);
+            const netKitSubtotal = grossKitSubtotal - kitDiscountAmount;
+
+            const mileageCost = (parseFloat(project.miles) || 0) * (parseFloat(project.mileageRate) || 0);
+            const parkingCost = parseFloat(project.parking) || 0;
+            const accommodationCost = parseFloat(project.accommodation) || 0;
+            const expensesSubtotal = mileageCost + parkingCost + accommodationCost;
+
+            const netSubtotalExVat = servicesSubtotal + netKitSubtotal + expensesSubtotal;
+            const vatRate = parseFloat(project.vatRate) || 0;
+            const vatAmount = netSubtotalExVat * (vatRate / 100);
+            const grandTotal = netSubtotalExVat + vatAmount;
+
+            const depositPct = Math.min(95, Math.max(5, parseFloat(project.depositPct) || 50));
+            const depositAmount = grandTotal * (depositPct / 100);
+            const balanceAmount = grandTotal - depositAmount;
+
+            let payableNow = grandTotal;
+            let payableLabel = project.docType === 'quote' ? 'Total Production Estimate' : 'Total Invoice Amount Due';
+
+            if (project.billingStage === 'deposit') {
+                payableNow = depositAmount;
+                payableLabel = `Booking Deposit Due (${depositPct}%)`;
+            } else if (project.billingStage === 'balance') {
+                payableNow = balanceAmount;
+                payableLabel = `Final Balance Due (Less ${depositPct}% Deposit)`;
+            }
+
+            return {
+                servicesSubtotal,
+                grossKitSubtotal,
+                discountPct,
+                kitDiscountAmount,
+                netKitSubtotal,
+                mileageCost,
+                parkingCost,
+                accommodationCost,
+                expensesSubtotal,
+                netSubtotalExVat,
+                vatRate,
+                vatAmount,
+                grandTotal,
+                depositPct,
+                depositAmount,
+                balanceAmount,
+                payableNow,
+                payableLabel,
+                totalWeightKg,
+                activeKitCount: activeKit.length
+            };
+        }
+
+        // ================= RENDERING PIPELINE =================
+        function renderWorkspace() {
+            enforceKitDaysSync();
+            setWorkspaceView(currentViewMode);
+
+            // Top bar project indicators
+            document.getElementById('topBarProjectName').textContent = project.projectTitle || project.clientCompany || 'Untitled Project';
+            document.getElementById('topBarDocBadge').textContent = project.docNumber || 'EST-2026-001';
+
+            // Doc type button states
+            const qBtn = document.getElementById('docTypeBtn-quote');
+            const iBtn = document.getElementById('docTypeBtn-invoice');
+            if (project.docType === 'quote') {
+                qBtn.className = 'px-2.5 py-1 rounded text-[11px] font-semibold bg-zinc-100 text-zinc-950 transition';
+                iBtn.className = 'px-2.5 py-1 rounded text-[11px] font-medium text-zinc-400 hover:text-zinc-100 transition';
+                document.getElementById('dueDateFieldLabel').textContent = 'Quote Valid Until';
+            } else {
+                iBtn.className = 'px-2.5 py-1 rounded text-[11px] font-semibold bg-zinc-100 text-zinc-950 transition';
+                qBtn.className = 'px-2.5 py-1 rounded text-[11px] font-medium text-zinc-400 hover:text-zinc-100 transition';
+                document.getElementById('dueDateFieldLabel').textContent = 'Payment Due Date';
+            }
+
+            renderServicesRows();
+            renderKitCategories();
+            renderLiveCalculations();
+        }
+
+        function renderServicesRows() {
+            const container = document.getElementById('servicesRowsContainer');
+            container.innerHTML = project.services.map((srv, idx) => {
+                const lineTotal = (parseFloat(srv.qty) || 0) * (parseFloat(srv.rate) || 0);
+                return `
+                    <div class="service-row-grid px-4 py-2.5 transition ${srv.selected ? 'bg-zinc-900' : 'bg-zinc-950/50 opacity-50'}">
+                        <div>
+                            <input type="checkbox" ${srv.selected ? 'checked' : ''} onchange="toggleServiceRow(${idx})" class="w-4 h-4 rounded bg-zinc-950 border-zinc-700 text-zinc-100 cursor-pointer">
+                        </div>
+                        <div class="space-y-1 min-w-0">
+                            <input type="text" value="${escapeAttr(srv.name)}" oninput="updateServiceField(${idx}, 'name', this.value)"
+                                class="w-full bg-transparent text-xs font-medium text-zinc-100 focus:outline-none focus:border-b focus:border-zinc-600">
+                            <input type="text" value="${escapeAttr(srv.spec || '')}" placeholder="Specification or scope note..." oninput="updateServiceField(${idx}, 'spec', this.value)"
+                                class="w-full bg-transparent text-[11px] text-zinc-500 focus:outline-none">
+                        </div>
+                        <div class="service-row-controls contents">
+                            <div>
+                                <select onchange="updateServiceField(${idx}, 'unit', this.value)" class="ui-input text-xs py-1 px-2">
+                                    <option value="Days" ${srv.unit === 'Days' ? 'selected' : ''}>Days</option>
+                                    <option value="Hours" ${srv.unit === 'Hours' ? 'selected' : ''}>Hours</option>
+                                    <option value="Fixed" ${srv.unit === 'Fixed' ? 'selected' : ''}>Fixed</option>
+                                    <option value="Deliverable" ${srv.unit === 'Deliverable' ? 'selected' : ''}>Deliverable</option>
+                                </select>
+                            </div>
+                            <div>
+                                <input type="number" min="0" step="0.5" value="${srv.qty}" oninput="updateServiceField(${idx}, 'qty', this.value)"
+                                    class="ui-input num text-right py-1 px-2">
+                            </div>
+                            <div>
+                                <input type="number" min="0" step="10" value="${srv.rate}" oninput="updateServiceField(${idx}, 'rate', this.value)"
+                                    class="ui-input num text-right py-1 px-2">
+                            </div>
+                        </div>
+                        <div id="srv-total-${idx}" class="num text-xs font-medium text-zinc-200 text-right hidden md:block">
+                            ${lineTotal > 0 ? `£${lineTotal.toFixed(2)}` : 'Included'}
+                        </div>
+                        <div class="text-right">
+                            ${!srv.isPrimaryShootDay ? `
+                                <button type="button" onclick="removeServiceRow(${idx})" class="text-zinc-500 hover:text-red-400 p-1 transition" title="Remove row">
+                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderKitCategories() {
+            const container = document.getElementById('kitCategoriesContainer');
+            const categories = [...new Set(project.kit.map(k => k.category))];
+
+            container.innerHTML = categories.map(cat => {
+                const items = project.kit.filter(k => k.category === cat);
+                const activeCount = items.filter(k => k.selected).length;
+                const catSubtotal = items.filter(k => k.selected).reduce((s, k) => s + ((parseFloat(k.rate) || 0) * (parseFloat(k.days) || 1)), 0);
+
+                return `
+                    <div>
+                        <div class="px-4 py-2 bg-zinc-925 flex items-center justify-between text-[11px]">
+                            <div class="flex items-center gap-2">
+                                <span class="font-semibold uppercase tracking-wider text-zinc-300">${escapeHtml(cat)}</span>
+                                <span class="num text-zinc-500">(${activeCount}/${items.length})</span>
+                            </div>
+                            <span class="num text-zinc-400">£${catSubtotal.toFixed(2)}</span>
+                        </div>
+                        <div class="divide-y divide-zinc-800/50">
+                            ${items.map(item => {
+                                const lineTot = (parseFloat(item.rate) || 0) * (parseFloat(item.days) || 1);
+                                return `
+                                    <div class="kit-row-grid px-4 py-2 transition ${item.selected ? 'bg-zinc-900' : 'bg-zinc-950/40 opacity-50'}">
+                                        <div>
+                                            <input type="checkbox" ${item.selected ? 'checked' : ''} onchange="toggleKitRow('${item.id}')" class="w-4 h-4 rounded bg-zinc-950 border-zinc-700 text-zinc-100 cursor-pointer">
+                                        </div>
+                                        <div onclick="toggleKitRow('${item.id}')" class="cursor-pointer min-w-0">
+                                            <div class="text-xs font-medium text-zinc-100 break-words">${escapeHtml(item.name)}</div>
+                                            <div class="text-[11px] text-zinc-500 break-words">${escapeHtml(item.spec || '')}</div>
+                                        </div>
+                                        <div class="kit-row-metrics contents">
+                                            <div class="num text-[11px] text-zinc-400 text-right">${Number(item.weight || 0).toFixed(2)} kg</div>
+                                            <div class="flex items-center gap-1">
+                                                <input type="number" min="0.5" step="0.5" value="${item.days}" title="Hire Days" oninput="updateKitField('${item.id}', 'days', this.value)"
+                                                    class="ui-input num text-right py-1 px-1.5 text-xs">
+                                            </div>
+                                            <div class="flex items-center gap-1">
+                                                <input type="number" min="0" step="5" value="${item.rate}" title="Daily Rate (£)" oninput="updateKitField('${item.id}', 'rate', this.value)"
+                                                    class="ui-input num text-right py-1 px-1.5 text-xs">
+                                            </div>
+                                            <div id="kit-line-${item.id}" class="num text-xs font-medium text-zinc-200 text-right">
+                                                ${lineTot > 0 ? `£${lineTot.toFixed(2)}` : 'Incl.'}
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderLiveCalculations() {
+            const totals = computeTotals();
+            const deps = evaluateSmartDependencies();
+
+            // Update top & section metrics
+            document.getElementById('navKitBadge').textContent = totals.activeKitCount;
+            document.getElementById('liveWeightMetric').textContent = `${totals.totalWeightKg.toFixed(2)} kg`;
+            document.getElementById('liveStageMetricLabel').textContent =
+                project.billingStage === 'deposit' ? `Deposit (${totals.depositPct}%):` :
+                project.billingStage === 'balance' ? 'Balance Due:' : 'Total Due:';
+            document.getElementById('liveTotalMetric').textContent = `£${totals.payableNow.toFixed(2)}`;
+            document.getElementById('servicesSectionSubtotal').textContent = `£${totals.servicesSubtotal.toFixed(2)}`;
+
+            // Update Kit Weight Progress Bar
+            document.getElementById('kitWeightDetail').textContent = `${totals.totalWeightKg.toFixed(2)} kg / 20.00 kg Carry-On (${(30 - totals.totalWeightKg).toFixed(1)} kg to 30kg Checked Max)`;
+            const weightBar = document.getElementById('kitWeightProgressBar');
+            const pct = Math.min(100, (totals.totalWeightKg / 30) * 100);
+            weightBar.style.width = `${pct}%`;
+            weightBar.className = `h-full transition-all duration-200 ${
+                totals.totalWeightKg > 30 ? 'bg-red-500' : totals.totalWeightKg > 20 ? 'bg-amber-400' : 'bg-emerald-500'
+            }`;
+
+            // Update Discount summary texts
+            document.getElementById('grossKitSummaryText').textContent = `Gross Kit: £${totals.grossKitSubtotal.toFixed(2)}`;
+            document.getElementById('discountKitSummaryText').textContent = `Bundle Savings (${totals.discountPct}%): -£${totals.kitDiscountAmount.toFixed(2)}`;
+            document.getElementById('netKitSummaryText').textContent = `Net Kit: £${totals.netKitSubtotal.toFixed(2)}`;
+
+            // Render Dependency Alerts & Flight Note
+            const alertsBox = document.getElementById('dependencyAlertsContainer');
+            let alertsHtml = '';
+            if (deps.missingIds.length > 0) {
+                alertsHtml += `
+                    <div class="bg-zinc-900 border border-amber-500/40 rounded-lg px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div class="space-y-1">
+                            <div class="text-xs font-semibold text-amber-400">Rig Compatibility & Cable Check</div>
+                            <div class="text-xs text-zinc-300 leading-relaxed">${deps.warnings.join(' ')}</div>
+                        </div>
+                        <button type="button" onclick="resolveAllDependencies()" class="px-3 py-1.5 rounded-md bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-semibold shrink-0 transition">
+                            Resolve (${deps.missingIds.length})
+                        </button>
+                    </div>
+                `;
+            }
+            if (deps.hasVlokFlightNote) {
+                alertsHtml += `
+                    <div class="bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-2.5 flex items-center justify-between gap-3 text-xs text-zinc-400">
+                        <span><strong class="text-zinc-200">IATA Battery Advisory:</strong> Hawk-Woods VL-175HP is rated at 175Wh (above 160Wh standard limit; verify airline carry-on approval if flying).</span>
+                    </div>
+                `;
+            }
+            alertsBox.innerHTML = alertsHtml;
+
+            // Render Swiss A4 Document
+            renderA4Document(totals);
+        }
+
+        function renderA4Document(totals) {
+            const sheet = document.getElementById('a4SheetElement');
+            const isQuote = project.docType === 'quote';
+            const docHeading = isQuote ? 'PRODUCTION ESTIMATE' : 'TAX INVOICE';
+
+            const activeServices = project.services.filter(s => s.selected);
+            const activeKit = project.kit.filter(k => k.selected);
+
+            sheet.innerHTML = `
+                <div>
+                    <!-- Document Header -->
+                    <div class="flex justify-between items-start pb-6 border-b-2 border-zinc-950 mb-6 gap-6">
+                        <div class="min-w-0">
+                            <div class="text-xl font-bold tracking-tight text-zinc-950 uppercase">${escapeHtml(agencyProfile.name || 'HAZ STUDIO')}</div>
+                            <div class="text-xs font-medium text-zinc-600 mt-0.5">${escapeHtml(agencyProfile.tagline || '')}</div>
+                            <div class="text-[11px] text-zinc-500 mt-2.5 space-y-0.5 leading-relaxed">
+                                <div>${escapeHtml(agencyProfile.address || '')}</div>
+                                <div>${escapeHtml(agencyProfile.email || '')} &bull; ${escapeHtml(agencyProfile.phone || '')}</div>
+                                ${project.vatNumber ? `<div class="num font-medium text-zinc-700">VAT Reg: ${escapeHtml(project.vatNumber)}</div>` : ''}
+                            </div>
+                        </div>
+
+                        <div class="text-right shrink-0">
+                            <div class="inline-block px-2 py-0.5 border border-zinc-300 rounded text-[10px] font-semibold uppercase tracking-wider text-zinc-700 mb-1.5">
+                                ${escapeHtml(project.status || 'Draft')}
+                            </div>
+                            <div class="text-base font-bold tracking-tight text-zinc-950">${docHeading}</div>
+                            <div class="num text-xs font-semibold text-zinc-700 mt-0.5">${escapeHtml(project.docNumber || 'EST-2026-001')}</div>
+                            <div class="text-[11px] text-zinc-500 mt-2 space-y-0.5">
+                                <div><span class="text-zinc-400">Issued:</span> <span class="num text-zinc-800">${formatDateGB(project.issueDate)}</span></div>
+                                <div><span class="text-zinc-400">${isQuote ? 'Valid Until:' : 'Due Date:'}</span> <span class="num text-zinc-800">${formatDateGB(project.dueDate)}</span></div>
+                                ${project.shootDates ? `<div><span class="text-zinc-400">Shoot Date(s):</span> <span class="text-zinc-800 font-medium">${escapeHtml(project.shootDates)}</span></div>` : ''}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Client & Project Meta Grid -->
+                    <div class="grid grid-cols-2 gap-8 pb-6 mb-6 border-b border-zinc-200 text-xs">
+                        <div class="min-w-0">
+                            <div class="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 mb-1">Client / Recipient</div>
+                            <div class="font-semibold text-zinc-950 text-sm break-words">${escapeHtml(project.clientCompany || project.clientName || 'Client')}</div>
+                            ${project.clientCompany && project.clientName ? `<div class="text-zinc-700 mt-0.5">Attn: ${escapeHtml(project.clientName)}</div>` : ''}
+                            ${project.clientAddress ? `<div class="text-zinc-600 mt-0.5 break-words">${escapeHtml(project.clientAddress)}</div>` : ''}
+                            ${project.clientEmail ? `<div class="text-zinc-500 mt-0.5 break-words">${escapeHtml(project.clientEmail)}</div>` : ''}
+                        </div>
+                        <div class="min-w-0">
+                            <div class="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 mb-1">Production Brief</div>
+                            <div class="font-semibold text-zinc-950 text-sm break-words">${escapeHtml(project.projectTitle || 'Commercial Video Production')}</div>
+                            <div class="text-zinc-600 mt-1 text-[11px] leading-relaxed">
+                                Production crew, cinema camera package, location audio & dual-drive media management.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 1: Deliverables, Crew & Post-Production -->
+                    ${activeServices.length > 0 ? `
+                        <div class="mb-6">
+                            <div class="text-[10px] font-bold uppercase tracking-wider text-zinc-500 pb-1.5 border-b border-zinc-900 mb-2">
+                                01 / Deliverables, Crew & Post-Production Services
+                            </div>
+                            <table class="a4-table text-xs">
+                                <thead>
+                                    <tr class="text-[10px] font-semibold uppercase text-zinc-400 border-b border-zinc-200">
+                                        <th class="py-1.5 text-left" style="width: 54%;">Description</th>
+                                        <th class="py-1.5 text-left" style="width: 14%;">Unit</th>
+                                        <th class="py-1.5 text-right" style="width: 10%;">Qty</th>
+                                        <th class="py-1.5 text-right" style="width: 11%;">Rate</th>
+                                        <th class="py-1.5 text-right" style="width: 11%;">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-zinc-200">
+                                    ${activeServices.map(s => {
+                                        const lineTot = (parseFloat(s.qty) || 0) * (parseFloat(s.rate) || 0);
+                                        return `
+                                            <tr>
+                                                <td class="py-2 pr-3">
+                                                    <div class="font-semibold text-zinc-900">${escapeHtml(s.name)}</div>
+                                                    ${s.spec ? `<div class="text-[11px] text-zinc-500">${escapeHtml(s.spec)}</div>` : ''}
+                                                </td>
+                                                <td class="py-2 text-zinc-600">${escapeHtml(s.unit)}</td>
+                                                <td class="py-2 text-right num text-zinc-700">${s.qty}</td>
+                                                <td class="py-2 text-right num text-zinc-600">${s.rate > 0 ? `£${Number(s.rate).toFixed(2)}` : '—'}</td>
+                                                <td class="py-2 text-right num font-semibold text-zinc-950">${lineTot > 0 ? `£${lineTot.toFixed(2)}` : 'Included'}</td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    ` : ''}
+
+                    <!-- Section 2: Production Equipment & Cinema Kit -->
+                    ${activeKit.length > 0 ? `
+                        <div class="mb-6">
+                            <div class="flex items-center justify-between pb-1.5 border-b border-zinc-900 mb-2">
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+                                    02 / Production Equipment & Kit Hire (${activeKit.length} Items &bull; ${totals.totalWeightKg.toFixed(1)} kg)
+                                </span>
+                                ${totals.discountPct > 0 ? `
+                                    <span class="num text-[10px] font-semibold text-zinc-700">
+                                        ${totals.discountPct}% Agency Bundle Discount Applied (-£${totals.kitDiscountAmount.toFixed(2)})
+                                    </span>
+                                ` : ''}
+                            </div>
+
+                            ${project.manifestMode === 'itemised' ? `
+                                <table class="a4-table text-[11px]">
+                                    <thead>
+                                        <tr class="text-[10px] font-semibold uppercase text-zinc-400 border-b border-zinc-200">
+                                            <th class="py-1 text-left" style="width: 56%;">Equipment Item</th>
+                                            <th class="py-1 text-left" style="width: 16%;">Category</th>
+                                            <th class="py-1 text-right" style="width: 8%;">Days</th>
+                                            <th class="py-1 text-right" style="width: 10%;">Rate/d</th>
+                                            <th class="py-1 text-right" style="width: 10%;">Gross</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-zinc-100">
+                                        ${activeKit.map(k => {
+                                            const line = (parseFloat(k.rate) || 0) * (parseFloat(k.days) || 1);
+                                            return `
+                                                <tr>
+                                                    <td class="py-1.5 pr-2 font-medium text-zinc-800">${escapeHtml(k.name)}</td>
+                                                    <td class="py-1.5 pr-2 text-[10px] text-zinc-500 truncate">${escapeHtml(k.category)}</td>
+                                                    <td class="py-1.5 text-right num text-zinc-600">${k.days}</td>
+                                                    <td class="py-1.5 text-right num text-zinc-600">${k.rate > 0 ? `£${Number(k.rate).toFixed(2)}` : 'Incl.'}</td>
+                                                    <td class="py-1.5 text-right num font-medium text-zinc-900">${line > 0 ? `£${line.toFixed(2)}` : 'Incl.'}</td>
+                                                </tr>
+                                            `;
+                                        }).join('')}
+                                    </tbody>
+                                </table>
+                            ` : `
+                                <div class="bg-zinc-50 border border-zinc-200 rounded p-3 text-xs">
+                                    <div class="flex justify-between items-center font-semibold text-zinc-900 mb-1.5">
+                                        <span>Complete Production Camera, Lens, Audio & Support Package (${getPrimaryShootDays()} Shoot Day(s))</span>
+                                        <span class="num">Gross Value: £${totals.grossKitSubtotal.toFixed(2)}</span>
+                                    </div>
+                                    <div class="text-[10px] text-zinc-600 leading-relaxed">
+                                        <strong>Manifest Included:</strong> ${activeKit.map(k => escapeHtml(k.name)).join(' • ')}
+                                    </div>
+                                </div>
+                            `}
+                        </div>
+                    ` : ''}
+
+                    <!-- Section 3: Travel & Production Expenses -->
+                    ${totals.expensesSubtotal > 0 ? `
+                        <div class="mb-6 print-avoid-break">
+                            <div class="text-[10px] font-bold uppercase tracking-wider text-zinc-500 pb-1.5 border-b border-zinc-900 mb-2">
+                                03 / Travel, Mileage & Production Expenses
+                            </div>
+                            <table class="a4-table text-xs">
+                                <tbody class="divide-y divide-zinc-200">
+                                    ${project.miles > 0 ? `
+                                        <tr>
+                                            <td class="py-1.5 text-zinc-800">Mileage Allowance (${project.miles} miles @ £${Number(project.mileageRate).toFixed(2)}/mi)</td>
+                                            <td class="py-1.5 text-right num font-semibold text-zinc-900">£${totals.mileageCost.toFixed(2)}</td>
+                                        </tr>
+                                    ` : ''}
+                                    ${project.parking > 0 ? `
+                                        <tr>
+                                            <td class="py-1.5 text-zinc-800">Parking, Tolls & Congestion Charges</td>
+                                            <td class="py-1.5 text-right num font-semibold text-zinc-900">£${totals.parkingCost.toFixed(2)}</td>
+                                        </tr>
+                                    ` : ''}
+                                    ${project.accommodation > 0 ? `
+                                        <tr>
+                                            <td class="py-1.5 text-zinc-800">Accommodation & Per Diems</td>
+                                            <td class="py-1.5 text-right num font-semibold text-zinc-900">£${totals.accommodationCost.toFixed(2)}</td>
+                                        </tr>
+                                    ` : ''}
+                                </tbody>
+                            </table>
+                        </div>
+                    ` : ''}
+                </div>
+
+                <!-- Document Footer: BACS & Financial Summary -->
+                <div class="print-avoid-break pt-5 border-t-2 border-zinc-950 mt-6">
+                    <div class="grid grid-cols-12 gap-6 items-start">
+                        <div class="col-span-7 text-[11px] text-zinc-600 space-y-2.5 pr-2">
+                            <div class="p-3 bg-zinc-50 border border-zinc-200 rounded">
+                                <div class="text-[10px] font-bold uppercase tracking-wider text-zinc-800 mb-1.5">BACS / Bank Transfer Remittance</div>
+                                <div class="grid grid-cols-2 gap-y-1 text-zinc-800">
+                                    <div><span class="text-zinc-400">Account:</span> <strong>${escapeHtml(agencyProfile.name)}</strong></div>
+                                    <div><span class="text-zinc-400">Bank:</span> <strong>${escapeHtml(agencyProfile.bankName)}</strong></div>
+                                    <div><span class="text-zinc-400">Sort Code:</span> <span class="num font-semibold">${escapeHtml(agencyProfile.bankSort)}</span></div>
+                                    <div><span class="text-zinc-400">Account No:</span> <span class="num font-semibold">${escapeHtml(agencyProfile.bankAccount)}</span></div>
+                                </div>
+                                <div class="text-[10px] text-zinc-500 mt-1.5">Reference: <strong class="num text-zinc-800">${escapeHtml(project.docNumber)}</strong></div>
+                            </div>
+                            <div class="leading-relaxed">
+                                <strong class="text-zinc-800">Terms:</strong> ${escapeHtml(project.paymentTerms)}
+                            </div>
+                        </div>
+
+                        <div class="col-span-5 bg-zinc-50 border border-zinc-200 rounded p-3.5 text-xs space-y-1.5">
+                            <div class="flex justify-between text-zinc-600">
+                                <span>Crew, Post & Deliverables:</span>
+                                <span class="num">£${totals.servicesSubtotal.toFixed(2)}</span>
+                            </div>
+                            <div class="flex justify-between text-zinc-600">
+                                <span>Gross Equipment Hire:</span>
+                                <span class="num">£${totals.grossKitSubtotal.toFixed(2)}</span>
+                            </div>
+                            ${totals.kitDiscountAmount > 0 ? `
+                                <div class="flex justify-between text-zinc-800 font-medium">
+                                    <span>Agency Bundle Discount (${totals.discountPct}%):</span>
+                                    <span class="num">-£${totals.kitDiscountAmount.toFixed(2)}</span>
+                                </div>
+                            ` : ''}
+                            <div class="flex justify-between text-zinc-600">
+                                <span>Net Equipment Hire:</span>
+                                <span class="num">£${totals.netKitSubtotal.toFixed(2)}</span>
+                            </div>
+                            ${totals.expensesSubtotal > 0 ? `
+                                <div class="flex justify-between text-zinc-600">
+                                    <span>Travel & Expenses:</span>
+                                    <span class="num">£${totals.expensesSubtotal.toFixed(2)}</span>
+                                </div>
+                            ` : ''}
+
+                            <div class="border-t border-zinc-300 pt-1.5 flex justify-between font-semibold text-zinc-800">
+                                <span>Subtotal (Excl. VAT):</span>
+                                <span class="num">£${totals.netSubtotalExVat.toFixed(2)}</span>
+                            </div>
+                            <div class="flex justify-between text-zinc-600">
+                                <span>VAT (${totals.vatRate}%):</span>
+                                <span class="num">£${totals.vatAmount.toFixed(2)}</span>
+                            </div>
+                            <div class="border-t border-zinc-900 pt-1.5 flex justify-between font-bold text-zinc-950 text-sm">
+                                <span>Total Project Value:</span>
+                                <span class="num">£${totals.grandTotal.toFixed(2)}</span>
+                            </div>
+
+                            <div class="pt-2 border-t border-zinc-200 flex justify-between items-baseline">
+                                <span class="text-[11px] font-bold uppercase text-zinc-800">${escapeHtml(totals.payableLabel)}:</span>
+                                <span class="num text-base font-bold text-zinc-950">£${totals.payableNow.toFixed(2)}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ================= MULTI-PROJECT DATABASE & JSON BACKUP =================
+        function getSavedProjects() {
+            try {
+                return JSON.parse(localStorage.getItem(DB_PROJECTS_KEY) || '[]');
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function saveProjectSnapshot() {
+            const list = getSavedProjects();
+            const totals = computeTotals();
+            const snapshot = JSON.parse(JSON.stringify(project));
+            snapshot.updatedAt = new Date().toISOString();
+            snapshot.cachedTotal = totals.grandTotal;
+
+            const idx = list.findIndex(p => p.id === snapshot.id);
+            if (idx >= 0) {
+                list[idx] = snapshot;
+            } else {
+                list.unshift(snapshot);
+            }
+            localStorage.setItem(DB_PROJECTS_KEY, JSON.stringify(list));
+            notifyToast(`Saved "${project.projectTitle || project.docNumber}"`);
+        }
+
+        function openProjectManagerModal() {
+            renderProjectsModalList();
+            document.getElementById('projectManagerModal').classList.remove('hidden');
+        }
+
+        function closeProjectManagerModal() {
+            document.getElementById('projectManagerModal').classList.add('hidden');
+        }
+
+        function renderProjectsModalList() {
+            const container = document.getElementById('projectsListContainer');
+            const list = getSavedProjects();
+
+            if (list.length === 0) {
+                container.innerHTML = `
+                    <div class="py-8 text-center text-xs text-zinc-500">
+                        No saved projects in local database yet. Click <strong>"Save Project"</strong> in the top bar to store the current quote/invoice.
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = list.map(item => `
+                <div class="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2">
+                            <span class="num text-xs font-semibold text-zinc-300">${escapeHtml(item.docNumber)}</span>
+                            <span class="text-xs font-semibold text-zinc-100 truncate">${escapeHtml(item.projectTitle || 'Untitled')}</span>
+                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300">${escapeHtml(item.status || 'Draft')}</span>
+                        </div>
+                        <div class="text-[11px] text-zinc-400 mt-0.5">
+                            Client: ${escapeHtml(item.clientCompany || item.clientName || '—')} &bull; Total: <span class="num text-zinc-200 font-medium">£${Number(item.cachedTotal || 0).toFixed(2)}</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-1.5 shrink-0">
+                        <button onclick="loadProjectById('${item.id}')" class="px-2.5 py-1 rounded bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-semibold">
+                            Open
+                        </button>
+                        <button onclick="duplicateProjectById('${item.id}')" class="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium">
+                            Duplicate
+                        </button>
+                        <button onclick="deleteProjectById('${item.id}')" class="px-2 py-1 rounded bg-zinc-950 hover:bg-red-950/60 text-zinc-400 hover:text-red-400 border border-zinc-800 text-xs">
+                            Delete
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function loadProjectById(id) {
+            const found = getSavedProjects().find(p => p.id === id);
+            if (!found) return;
+            project = JSON.parse(JSON.stringify(found));
+            persistDatabase();
+            populateInputsFromState();
+            renderWorkspace();
+            closeProjectManagerModal();
+            notifyToast(`Loaded ${project.docNumber}`);
+        }
+
+        function duplicateProjectById(id) {
+            const list = getSavedProjects();
+            const found = list.find(p => p.id === id);
+            if (!found) return;
+            const copy = JSON.parse(JSON.stringify(found));
+            copy.id = 'proj_' + Date.now();
+            copy.docNumber = copy.docNumber + '-COPY';
+            copy.projectTitle = (copy.projectTitle || 'Project') + ' (Copy)';
+            list.unshift(copy);
+            localStorage.setItem(DB_PROJECTS_KEY, JSON.stringify(list));
+            renderProjectsModalList();
+            notifyToast('Project duplicated');
+        }
+
+        function deleteProjectById(id) {
+            const list = getSavedProjects().filter(p => p.id !== id);
+            localStorage.setItem(DB_PROJECTS_KEY, JSON.stringify(list));
+            renderProjectsModalList();
+        }
+
+        function createNewProject() {
+            project = createDefaultProject();
+            incrementDocNumber();
+            project.clientName = '';
+            project.clientCompany = '';
+            project.clientEmail = '';
+            project.clientAddress = '';
+            project.projectTitle = 'New Commercial Production';
+            persistDatabase();
+            populateInputsFromState();
+            renderWorkspace();
+            closeProjectManagerModal();
+            notifyToast('Created new project');
+        }
+
+        // ================= JSON EXPORT / IMPORT & STANDALONE HTML =================
+        function openAppBackupModal() {
+            document.getElementById('appBackupModal').classList.remove('hidden');
+        }
+
+        function closeAppBackupModal() {
+            document.getElementById('appBackupModal').classList.add('hidden');
+        }
+
+        function exportDatabaseJSON() {
+            saveProjectSnapshot();
+            const payload = {
+                exportedAt: new Date().toISOString(),
+                agencyProfile,
+                activeProject: project,
+                savedProjects: getSavedProjects()
+            };
+            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `HAZ-STUDIO-Backup-${new Date().toISOString().slice(0, 10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            notifyToast('Exported JSON backup file');
+        }
+
+        function importDatabaseJSON(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (data.agencyProfile) agencyProfile = data.agencyProfile;
+                    if (data.activeProject) project = data.activeProject;
+                    if (Array.isArray(data.savedProjects)) {
+                        localStorage.setItem(DB_PROJECTS_KEY, JSON.stringify(data.savedProjects));
+                    }
+                    persistDatabase();
+                    populateInputsFromState();
+                    renderWorkspace();
+                    closeAppBackupModal();
+                    notifyToast('Backup imported successfully');
+                } catch (err) {
+                    notifyToast('Invalid JSON backup file');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function downloadStandaloneInvoiceHTML() {
+            const sheetContent = document.getElementById('a4SheetElement').innerHTML;
+            const htmlDoc = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${escapeHtml(project.docNumber)} — ${escapeHtml(project.projectTitle)}</title>
+<script src="https://cdn.tailwindcss.com"><\/script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  body { font-family: 'Inter', sans-serif; background: #f4f4f5; color: #09090b; padding: 32px 16px; margin: 0; }
+  .num { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
+  .sheet { max-width: 794px; margin: 0 auto; background: #ffffff; padding: 48px 52px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
+  .a4-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  @media print { body { background: #fff; padding: 0; } .sheet { box-shadow: none; padding: 8px; } .no-print { display: none; } }
+</style>
+</head>
+<body>
+  <div class="no-print max-w-[794px] mx-auto mb-4 flex justify-between items-center">
+    <span class="text-xs font-semibold text-zinc-600">${escapeHtml(agencyProfile.name)} — Official Client Document</span>
+    <button onclick="window.print()" class="px-3.5 py-1.5 bg-zinc-900 text-white text-xs font-semibold rounded">Print / Save A4 PDF</button>
+  </div>
+  <div class="sheet">${sheetContent}</div>
+</body>
+</html>`;
+
+            const blob = new Blob([htmlDoc], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${(project.docNumber || 'Document').replace(/[^a-zA-Z0-9-_]/g, '_')}.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            notifyToast('Downloaded standalone client HTML invoice');
+        }
+
+        // ================= EMAIL COMPOSER =================
+        function openEmailComposerModal() {
+            const totals = computeTotals();
+            const isQuote = project.docType === 'quote';
+            const activeServices = project.services.filter(s => s.selected).map(s => `- ${s.name} (${s.qty} ${s.unit})`).join('\n');
+
+            const body = [
+                `Subject: ${isQuote ? 'Production Estimate' : 'Tax Invoice'} ${project.docNumber} — ${project.projectTitle}`,
+                ``,
+                `Hi ${project.clientName || 'there'},`,
+                ``,
+                `Please find attached our ${isQuote ? 'production estimate' : 'invoice'} (${project.docNumber}) for ${project.projectTitle}.`,
+                ``,
+                `SCOPE & SERVICES INCLUDED:`,
+                activeServices || `- Full Commercial Production Package`,
+                `- Equipment Package: ${totals.activeKitCount} cinema camera, lens, audio & support items`,
+                totals.kitDiscountAmount > 0 ? `- Agency Equipment Bundle Discount (${totals.discountPct}%): -£${totals.kitDiscountAmount.toFixed(2)}` : null,
+                ``,
+                `SUMMARY:`,
+                `- Total Project Value: £${totals.grandTotal.toFixed(2)}${totals.vatRate > 0 ? ` (incl. ${totals.vatRate}% VAT)` : ''}`,
+                `- ${totals.payableLabel}: £${totals.payableNow.toFixed(2)}`,
+                ``,
+                `BACS PAYMENT DETAILS:`,
+                `Account Name: ${agencyProfile.name}`,
+                `Bank: ${agencyProfile.bankName}`,
+                `Sort Code: ${agencyProfile.bankSort}`,
+                `Account No: ${agencyProfile.bankAccount}`,
+                `Reference: ${project.docNumber}`,
+                ``,
+                `Kind regards,`,
+                `${agencyProfile.name}`,
+                `${agencyProfile.email} | ${agencyProfile.phone}`
+            ].filter(Boolean).join('\n');
+
+            document.getElementById('emailComposerTextarea').value = body;
+            document.getElementById('emailComposerModal').classList.remove('hidden');
+        }
+
+        function closeEmailComposerModal() {
+            document.getElementById('emailComposerModal').classList.add('hidden');
+        }
+
+        function copyEmailToClipboard() {
+            const el = document.getElementById('emailComposerTextarea');
+            el.select();
+            document.execCommand('copy');
+            closeEmailComposerModal();
+            notifyToast('Copied email text to clipboard');
+        }
+
+        // ================= UTILITIES =================
+        function formatDateGB(str) {
+            if (!str) return 'TBC';
+            const p = str.split('-');
+            return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : str;
+        }
+
+        function escapeHtml(str) {
+            return String(str || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function escapeAttr(str) {
+            return String(str || '').replace(/"/g, '&quot;');
+        }
+    </script>
+</body>
+</html>
+```
+
+### Key Architectural & Usability Improvements:
+1. **Clean Studio UI & Zero Text Overlap**: Built with a strict `#09090b` / `#121215` zinc palette, crisp `1px` borders, tabular monospace numerals (`JetBrains Mono`), and responsive CSS Grid row templates (`service-row-grid` and `kit-row-grid`) so long item names wrap cleanly without ever colliding with quantities, rates, or totals.
+2. **Proportional A4 Document Scaler**: A `ResizeObserver` automatically scales the 794px Swiss-grid A4 preview to fit any laptop split-screen width without horizontal overflow, and resets to 1:1 native A4 dimensions when you click **Export A4 PDF**.
+3. **Standalone Desktop Application & JSON Backup**: Click **App & Backup** in the top bar to export or import `.json` studio backup files directly to your laptop hard drive, download a standalone client `.html` invoice, or install the suite as a native desktop app window in Chrome, Edge, or Safari.
